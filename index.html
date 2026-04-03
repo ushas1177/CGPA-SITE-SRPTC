@@ -1588,7 +1588,7 @@ function showStudentModal(prefill = {}) {
         showClose: !!(prefill.name),
         fields: [
             { id: 'inputName', label: 'Full Name',       placeholder: 'e.g. Arjun Kumar', value: prefill.name || '', autocomplete: 'off' },
-            { id: 'inputReg',  label: 'Register Number', placeholder: 'e.g. 24502500',    value: prefill.reg  || '' }
+            { id: 'inputReg',  label: 'Register Number', placeholder: 'e.g. ***********',    value: prefill.reg  || '' }
         ],
         primaryBtn: prefill.name ? '💾 Save Changes' : '→ Enter Calculator',
         onSubmit: (overlay, showError, getVal) => {
