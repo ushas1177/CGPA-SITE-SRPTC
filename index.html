@@ -2657,7 +2657,7 @@ function adminBuildMarkSheet(regNo, name, draft) {
     <div class="rpt-student-box" style="grid-template-columns:1fr 1fr 1fr 1fr;">
         <div class="rpt-student-cell"><div class="rpt-cell-label">Student Name</div><div class="rpt-cell-value">${escapeHtml(name)}</div></div>
         <div class="rpt-student-cell"><div class="rpt-cell-label">Register Number</div><div class="rpt-cell-value" style="font-family:'JetBrains Mono','Courier New',monospace;">${escapeHtml(regNo)}</div></div>
-        <div class="rpt-student-cell"><div class="rpt-cell-label">Department</div><div class="rpt-cell-value">${escapeHtml(deptLabel)}</div></div>
+        <div class="rpt-student-cell"><div class="rpt-cell-label">Course</div><div class="rpt-cell-value">${escapeHtml(deptLabel)}</div></div>
         <div class="rpt-student-cell" style="border-right:none;"><div class="rpt-cell-label">CGPA / Class</div><div class="rpt-cell-value" style="font-family:'JetBrains Mono','Courier New',monospace;color:#1a4a8a;">${cgpa} <span style="font-size:9px;color:#64748b;">${cgpaClass}</span></div></div>
     </div>
     <div class="rpt-section-title">Subject-wise Grade Report (All Semesters)</div>
@@ -2778,7 +2778,7 @@ function adminViewReport(regNo, name, draft) {
             <div class="rpt-cell-value" style="font-family:'JetBrains Mono','Courier New',monospace;">${escapeHtml(regNo)}</div>
         </div>
         <div class="rpt-student-cell">
-            <div class="rpt-cell-label">Department</div>
+            <div class="rpt-cell-label">Course</div>
             <div class="rpt-cell-value">${escapeHtml(deptLabel)}</div>
         </div>
     </div>
@@ -3147,7 +3147,7 @@ function buildPrintableReport() {
             <div class="rpt-cell-value" style="font-family:'JetBrains Mono','Courier New',monospace;">${studentRegNo}</div>
         </div>
         <div class="rpt-student-cell">
-            <div class="rpt-cell-label">Department</div>
+            <div class="rpt-cell-label">Course</div>
             <div class="rpt-cell-value">${escapeHtml(deptLabel)}</div>
         </div>
     </div>
@@ -3414,7 +3414,7 @@ function buildMarkSheetReport() {
             <div class="rpt-cell-value" style="font-family:'JetBrains Mono','Courier New',monospace;">${studentRegNo}</div>
         </div>
         <div class="rpt-student-cell">
-            <div class="rpt-cell-label">Department</div>
+            <div class="rpt-cell-label">Course</div>
             <div class="rpt-cell-value">${escapeHtml(deptLabel)}</div>
         </div>
         <div class="rpt-student-cell" style="border-right:none;">
