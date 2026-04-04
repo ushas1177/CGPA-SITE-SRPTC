@@ -3773,6 +3773,91 @@ function init() {
 
 
 init();
+
+// ============================================================
+// AUTO-LOGOUT ON TAB CLOSE / WINDOW CLOSE
+// Saves draft and clears session so the next visit goes to login
+// ============================================================
+(function() {
+    /**
+     * Core auto-logout: save draft, clear session keys, redirect to
+     * the landing page (or, if the page is being unloaded, just clear
+     * localStorage so the next fresh load shows the login screen).
+     */
+    function autoLogout(isUnload) {
+        // Only act if a student is currently logged in
+        if (!currentStudentName && !currentStudentRegNo) return;
+
+        // Save the latest draft so nothing is lost
+        saveDraft({});
+
+        // Log the auto-logout event in admin activity log
+        try {
+            addStudentLog(currentStudentName, currentStudentRegNo, 'logout');
+        } catch(e) {}
+
+        // Clear the session (keep draft key intact — restored on next login)
+        localStorage.removeItem('studentName');
+        localStorage.removeItem('studentRegNo');
+
+        if (isUnload) {
+            // During unload we cannot navigate — the session keys are already
+            // cleared so the next page load will show the login screen.
+            return;
+        }
+
+        // If the page is still open (visibilitychange hidden), reset the UI
+        currentStudentName  = '';
+        currentStudentRegNo = '';
+
+        for (let i = 1; i <= 6; i++) {
+            const inp = document.getElementById(`sem${i}Gpa`);
+            const st  = document.getElementById(`sem${i}Status`);
+            if (inp) inp.value = '';
+            if (st)  st.textContent = '-';
+        }
+        try {
+            document.getElementById('finalCgpa').textContent           = '—';
+            document.getElementById('classificationResult').textContent = '';
+            document.getElementById('gradeSummary').textContent         = '';
+            document.getElementById('gpaValue').textContent             = '—';
+            document.getElementById('totalCredits').textContent         = '0';
+            updateStudentDisplay();
+        } catch(e) {}
+
+        // Show landing / login page
+        const landing = document.getElementById('landingPage');
+        const main    = document.getElementById('mainApp');
+        if (main)    main.style.display    = 'none';
+        if (landing) landing.style.display = 'flex';
+    }
+
+    // ── beforeunload: fires when the tab or browser window is closed,
+    //    or when the user navigates away.  We only clear localStorage here
+    //    (no UI changes possible during unload).
+    window.addEventListener('beforeunload', function() {
+        autoLogout(true);
+    });
+
+    // ── pagehide: a more reliable companion to beforeunload on mobile
+    //    browsers (iOS Safari) where beforeunload may not fire.
+    window.addEventListener('pagehide', function(e) {
+        // e.persisted === true means the page went into the bfcache (back/forward);
+        // we still want to logout in that case so the cached page doesn't show
+        // a logged-in state if the user returns to it.
+        autoLogout(true);
+    });
+
+    // ── visibilitychange: fires when the tab is hidden (e.g. the user
+    //    switches tabs or minimises the browser).  On mobile this is also
+    //    the primary signal that the app has been "closed" by the OS.
+    document.addEventListener('visibilitychange', function() {
+        if (document.visibilityState === 'hidden') {
+            // Save draft silently on hide (acts as an extra auto-save)
+            try { saveDraft({}); } catch(e) {}
+        }
+    });
+})();
 </script>
 </body>
 </html>
