@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>DOTE Diploma GPA & CGPA Calculator | Regulation 2023</title>
+    <link rel="icon" type="image/png" href="srptc.png">
+    <link rel="apple-touch-icon" href="srptc.png">
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
@@ -1188,6 +1190,7 @@
         <h1>📊 DOTE Diploma GPA &amp; CGPA Calculator</h1>
         <p>Directorate of Technical Education, Tamil Nadu</p>
         <div class="regulation-badge" id="regBadge">🎓 O=10 · A+=9 · A=8 · B+=7 · B=6 · C=5 · RA=0 · SA=0</div>
+        <button id="howToUseBtn" onclick="window.startTour && window.startTour()" style="margin-top:1rem;display:inline-flex;align-items:center;gap:0.45rem;background:linear-gradient(135deg,rgba(245,158,11,0.18),rgba(251,146,60,0.12));border:1.5px solid rgba(245,158,11,0.45);color:#fbbf24;font-family:'Sora',sans-serif;font-weight:700;font-size:0.82rem;padding:0.5rem 1.3rem;border-radius:100px;cursor:pointer;transition:all 0.25s cubic-bezier(0.34,1.56,0.64,1);letter-spacing:0.03em;box-shadow:0 2px 12px rgba(245,158,11,0.15);" onmouseover="this.style.transform='translateY(-2px) scale(1.04)';this.style.background='linear-gradient(135deg,rgba(245,158,11,0.32),rgba(251,146,60,0.22))';this.style.boxShadow='0 6px 22px rgba(245,158,11,0.3)'" onmouseout="this.style.transform='';this.style.background='linear-gradient(135deg,rgba(245,158,11,0.18),rgba(251,146,60,0.12))';this.style.boxShadow='0 2px 12px rgba(245,158,11,0.15)'">❓ How to Use?</button>
     </div>
 
     <div class="dashboard">
@@ -3773,6 +3776,636 @@ function init() {
 
 
 init();
+
+// ============================================================
+// FIRST-TIME USER TUTORIAL  (v2 — with animated screen previews)
+// ============================================================
+window.startTour = function() {
+    // Remove any existing tour elements before restarting
+    ['tourBackdrop','tourSpotlight','tourCard','tourArrow','tourSkipAll'].forEach(function(id){
+        var el = document.getElementById(id);
+        if (el) el.remove();
+    });
+    runTour();
+};
+(function() {
+    runTour();
+})();
+function runTour() {
+
+    /* ─────────────────────────────────────────────────────────
+       ANIMATED SCREEN PREVIEWS
+       Each returns an HTML string that is injected as a
+       mini "phone screen" inside the tour card.
+       Animations are driven by CSS @keyframes defined inline.
+    ───────────────────────────────────────────────────────── */
+    const screens = {
+
+        // Step 0 — Welcome splash
+        welcome: `
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:10px;padding:8px;">
+          <div style="font-size:2.6rem;animation:tsBounce 0.7s cubic-bezier(0.34,1.56,0.64,1) both;">🎓</div>
+          <div style="font-size:0.72rem;font-weight:800;color:#fbbf24;letter-spacing:0.08em;text-transform:uppercase;animation:tsFadeUp 0.5s 0.2s both;">CGPA Calculator</div>
+          <div style="display:flex;gap:6px;animation:tsFadeUp 0.5s 0.4s both;">
+            <div style="background:rgba(245,158,11,0.2);border:1px solid rgba(245,158,11,0.4);border-radius:100px;padding:2px 8px;font-size:0.58rem;color:#fbbf24;">Reg 2023</div>
+            <div style="background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);border-radius:100px;padding:2px 8px;font-size:0.58rem;color:#34d399;">DOTE</div>
+          </div>
+          <div style="margin-top:4px;display:flex;gap:5px;animation:tsFadeUp 0.5s 0.6s both;">
+            <div style="width:6px;height:6px;border-radius:50%;background:#f59e0b;animation:tsPulse 1.2s 0s infinite;"></div>
+            <div style="width:6px;height:6px;border-radius:50%;background:#f59e0b;animation:tsPulse 1.2s 0.2s infinite;"></div>
+            <div style="width:6px;height:6px;border-radius:50%;background:#f59e0b;animation:tsPulse 1.2s 0.4s infinite;"></div>
+          </div>
+        </div>`,
+
+        // Step 1 — Role selection
+        roles: `
+        <div style="display:flex;flex-direction:column;gap:7px;padding:8px;height:100%;justify-content:center;">
+          <div style="font-size:0.6rem;color:rgba(255,255,255,0.4);text-align:center;margin-bottom:2px;">Choose your role</div>
+          <div id="tsRoleStudent" style="background:rgba(26,74,138,0.5);border:1px solid rgba(26,74,138,0.8);border-radius:10px;padding:8px 10px;display:flex;align-items:center;gap:8px;cursor:pointer;animation:tsSlideIn 0.4s 0.1s both;transition:all 0.25s;">
+            <span style="font-size:1.3rem;">🎓</span>
+            <div>
+              <div style="font-size:0.65rem;font-weight:800;color:white;">Student</div>
+              <div style="font-size:0.52rem;color:rgba(255,255,255,0.5);">Calculate my GPA & CGPA</div>
+            </div>
+            <span style="margin-left:auto;color:rgba(255,255,255,0.4);font-size:0.7rem;">→</span>
+          </div>
+          <div style="background:rgba(239,68,68,0.2);border:1px solid rgba(239,68,68,0.3);border-radius:10px;padding:8px 10px;display:flex;align-items:center;gap:8px;animation:tsSlideIn 0.4s 0.25s both;">
+            <span style="font-size:1.3rem;">🔐</span>
+            <div>
+              <div style="font-size:0.65rem;font-weight:800;color:white;">Admin</div>
+              <div style="font-size:0.52rem;color:rgba(255,255,255,0.5);">Manage grades & students</div>
+            </div>
+            <span style="margin-left:auto;color:rgba(255,255,255,0.4);font-size:0.7rem;">→</span>
+          </div>
+          <div id="tsClickHint" style="text-align:center;font-size:0.52rem;color:#fbbf24;animation:tsFadeUp 0.4s 0.6s both;">👆 Tap Student to begin</div>
+        </div>
+        <script>
+        (function(){
+          var el = document.getElementById('tsRoleStudent');
+          if(!el) return;
+          var on=false;
+          setInterval(function(){
+            on=!on;
+            el.style.transform = on ? 'scale(1.04)' : 'scale(1)';
+            el.style.boxShadow = on ? '0 0 16px rgba(26,74,138,0.9)' : 'none';
+            el.style.borderColor = on ? 'rgba(100,160,255,0.9)' : 'rgba(26,74,138,0.8)';
+          },900);
+        })();
+        <\/script>`,
+
+        // Step 2 — Dept & Semester dropdowns
+        dept: `
+        <div style="display:flex;flex-direction:column;gap:7px;padding:8px;height:100%;justify-content:center;">
+          <div style="font-size:0.58rem;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px;">Department & Semester</div>
+          <div style="animation:tsSlideIn 0.4s 0.05s both;">
+            <div style="font-size:0.55rem;color:rgba(255,255,255,0.4);margin-bottom:3px;">DEPARTMENT</div>
+            <div id="tsDeptBox" style="background:rgba(255,255,255,0.08);border:1px solid rgba(245,158,11,0.6);border-radius:7px;padding:6px 8px;font-size:0.62rem;color:white;display:flex;justify-content:space-between;align-items:center;box-shadow:0 0 10px rgba(245,158,11,0.2);">
+              <span id="tsDeptVal">Computer Engineering</span><span style="color:#fbbf24;">▾</span>
+            </div>
+          </div>
+          <div style="animation:tsSlideIn 0.4s 0.2s both;">
+            <div style="font-size:0.55rem;color:rgba(255,255,255,0.4);margin-bottom:3px;">SEMESTER</div>
+            <div id="tsSemBox" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:7px;padding:6px 8px;font-size:0.62rem;color:white;display:flex;justify-content:space-between;align-items:center;">
+              <span id="tsSemVal">Semester 1</span><span style="color:rgba(255,255,255,0.4);">▾</span>
+            </div>
+          </div>
+          <div style="background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.25);border-radius:7px;padding:5px 8px;font-size:0.55rem;color:#34d399;text-align:center;animation:tsFadeUp 0.4s 0.5s both;">
+            ✓ 6 subjects loaded automatically
+          </div>
+        </div>
+        <script>
+        (function(){
+          var depts=['Computer Engineering','Civil Engineering','Mechanical Engg','Electronics & Comm','Electrical Engg'];
+          var sems=['Semester 1','Semester 2','Semester 3','Semester 4','Semester 5','Semester 6'];
+          var di=0,si=0;
+          setInterval(function(){
+            di=(di+1)%depts.length;
+            var d=document.getElementById('tsDeptVal'); if(d){d.style.opacity='0';setTimeout(function(){d.textContent=depts[di];d.style.opacity='1';},180);}
+          },1800);
+          setTimeout(function(){
+            setInterval(function(){
+              si=(si+1)%sems.length;
+              var s=document.getElementById('tsSemVal'); if(s){s.style.opacity='0';setTimeout(function(){s.textContent=sems[si];s.style.opacity='1';},180);}
+            },2200);
+          },600);
+        })();
+        <\/script>`,
+
+        // Step 3 — Grade entry table
+        grades: `
+        <div style="display:flex;flex-direction:column;gap:0;padding:8px;height:100%;justify-content:center;">
+          <div style="font-size:0.58rem;color:rgba(255,255,255,0.4);margin-bottom:5px;text-transform:uppercase;letter-spacing:0.05em;">Enter Your Grades</div>
+          <div style="border-radius:8px;overflow:hidden;border:1px solid rgba(255,255,255,0.1);">
+            <div style="display:grid;grid-template-columns:1fr 40px 60px;background:rgba(26,74,138,0.5);padding:4px 6px;font-size:0.5rem;color:rgba(255,255,255,0.5);font-weight:700;letter-spacing:0.05em;">
+              <span>SUBJECT</span><span style="text-align:center;">CR</span><span style="text-align:center;">GRADE</span>
+            </div>
+            <div id="tsGradeRows"></div>
+          </div>
+        </div>
+        <script>
+        (function(){
+          var subjs=[['Applied Maths',4,'O'],['English',3,'A+'],['Physics',4,'A'],['Chemistry',4,'B+'],['Prog Fund.',3,'O'],['Engg Drawing',3,'A+']];
+          var grades=['O','A+','A','B+','B','C'];
+          var colors={'O':'#34d399','A+':'#60a5fa','A':'#a78bfa','B+':'#fbbf24','B':'#fb923c','C':'#f87171'};
+          var container=document.getElementById('tsGradeRows');
+          if(!container)return;
+          subjs.forEach(function(s,i){
+            var row=document.createElement('div');
+            row.style.cssText='display:grid;grid-template-columns:1fr 40px 60px;padding:4px 6px;border-top:1px solid rgba(255,255,255,0.06);align-items:center;transition:background 0.3s;';
+            row.innerHTML='<span style="font-size:0.55rem;color:rgba(255,255,255,0.8);">'+s[0]+'</span>'
+              +'<span style="text-align:center;font-size:0.55rem;color:#fbbf24;">'+s[1]+'</span>'
+              +'<div style="text-align:center;"><span id="tsG'+i+'" style="font-size:0.58rem;font-weight:800;padding:1px 5px;border-radius:100px;background:rgba(52,211,153,0.15);color:'+colors[s[2]]+';">'+s[2]+'</span></div>';
+            container.appendChild(row);
+            // Animate grade cycling
+            var gi=grades.indexOf(s[2]);
+            setInterval(function(){
+              gi=(gi+1)%grades.length;
+              var el=document.getElementById('tsG'+i);
+              if(!el)return;
+              el.style.transform='scale(1.3)';
+              el.style.opacity='0';
+              setTimeout(function(){
+                el.textContent=grades[gi];
+                el.style.color=colors[grades[gi]];
+                el.style.transform='scale(1)';
+                el.style.opacity='1';
+              },200);
+            }, 1200+(i*300));
+          });
+        })();
+        <\/script>`,
+
+        // Step 4 — Calculate GPA button + result
+        calcgpa: `
+        <div style="display:flex;flex-direction:column;gap:7px;padding:8px;height:100%;justify-content:center;">
+          <div style="font-size:0.58rem;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:2px;">GPA Calculation</div>
+          <div style="display:flex;gap:5px;flex-wrap:wrap;">
+            <div id="tsCalcBtn" style="flex:1;background:linear-gradient(135deg,#1a4a8a,#2563eb);border-radius:8px;padding:7px 6px;text-align:center;font-size:0.6rem;font-weight:800;color:white;cursor:pointer;box-shadow:0 4px 14px rgba(26,74,138,0.5);animation:tsCalcPulse 1.5s 0.5s infinite;">⚡ Calculate GPA</div>
+            <div style="flex:1;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);border-radius:8px;padding:7px 6px;text-align:center;font-size:0.6rem;font-weight:800;color:#34d399;cursor:pointer;">💾 Save GPA</div>
+          </div>
+          <div id="tsGpaResult" style="background:linear-gradient(135deg,rgba(26,74,138,0.5),rgba(10,30,60,0.8));border:1px solid rgba(26,74,138,0.5);border-radius:10px;padding:10px;text-align:center;animation:tsSlideIn 0.5s 0.3s both;">
+            <div style="font-size:0.55rem;color:rgba(255,255,255,0.4);margin-bottom:4px;">YOUR GPA</div>
+            <div id="tsGpaNum" style="font-size:1.8rem;font-weight:900;color:white;font-family:'JetBrains Mono',monospace;line-height:1;transition:all 0.4s;">—</div>
+            <div id="tsGpaClass" style="font-size:0.58rem;color:#fbbf24;margin-top:4px;font-weight:700;min-height:14px;"></div>
+          </div>
+        </div>
+        <script>
+        (function(){
+          var vals=[['—',''],['8.45','First Class with Distinction'],['9.12','Outstanding'],['7.80','First Class'],['9.50','Outstanding']];
+          var vi=0;
+          setTimeout(function(){
+            setInterval(function(){
+              vi=(vi+1)%vals.length;
+              var n=document.getElementById('tsGpaNum');
+              var c=document.getElementById('tsGpaClass');
+              if(!n||!c)return;
+              n.style.opacity='0'; n.style.transform='scale(0.7)';
+              setTimeout(function(){
+                n.textContent=vals[vi][0]; c.textContent=vals[vi][1];
+                n.style.opacity='1'; n.style.transform='scale(1)';
+              },300);
+            },1600);
+          },800);
+        })();
+        <\/script>`,
+
+        // Step 5 — CGPA panel
+        cgpa: `
+        <div style="display:flex;flex-direction:column;gap:6px;padding:8px;height:100%;justify-content:center;">
+          <div style="font-size:0.58rem;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:1px;">All Semesters → CGPA</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;">
+            <div id="tsS1" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:7px;padding:5px;text-align:center;animation:tsSlideIn 0.4s 0.05s both;">
+              <div style="font-size:0.48rem;color:rgba(255,255,255,0.35);">SEM 1</div>
+              <div style="font-size:0.8rem;font-weight:800;color:#34d399;font-family:'JetBrains Mono',monospace;">8.45</div>
+            </div>
+            <div id="tsS2" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:7px;padding:5px;text-align:center;animation:tsSlideIn 0.4s 0.15s both;">
+              <div style="font-size:0.48rem;color:rgba(255,255,255,0.35);">SEM 2</div>
+              <div style="font-size:0.8rem;font-weight:800;color:#60a5fa;font-family:'JetBrains Mono',monospace;">9.10</div>
+            </div>
+            <div id="tsS3" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:7px;padding:5px;text-align:center;animation:tsSlideIn 0.4s 0.25s both;">
+              <div style="font-size:0.48rem;color:rgba(255,255,255,0.35);">SEM 3</div>
+              <div style="font-size:0.8rem;font-weight:800;color:#a78bfa;font-family:'JetBrains Mono',monospace;">8.70</div>
+            </div>
+          </div>
+          <div id="tsCgpaCalcBtn" style="background:linear-gradient(135deg,#7c3aed,#4f46e5);border-radius:8px;padding:6px;text-align:center;font-size:0.62rem;font-weight:800;color:white;animation:tsCalcPulse 1.5s 0.8s infinite;box-shadow:0 4px 14px rgba(124,58,237,0.5);">📊 Calculate CGPA</div>
+          <div style="background:linear-gradient(135deg,rgba(124,58,237,0.3),rgba(79,70,229,0.2));border:1px solid rgba(124,58,237,0.4);border-radius:10px;padding:8px;text-align:center;animation:tsSlideIn 0.5s 0.5s both;">
+            <div style="font-size:0.5rem;color:rgba(255,255,255,0.4);margin-bottom:3px;">OVERALL CGPA</div>
+            <div id="tsCgpaNum" style="font-size:1.6rem;font-weight:900;color:white;font-family:'JetBrains Mono',monospace;transition:all 0.5s;">8.75</div>
+            <div style="font-size:0.55rem;color:#fbbf24;font-weight:700;margin-top:3px;">First Class with Distinction 🏆</div>
+          </div>
+        </div>
+        <script>
+        (function(){
+          var nums=['8.75','9.08','8.22','9.41'];
+          var ni=0;
+          setInterval(function(){
+            ni=(ni+1)%nums.length;
+            var el=document.getElementById('tsCgpaNum');
+            if(!el)return;
+            el.style.transform='translateY(-8px)';el.style.opacity='0';
+            setTimeout(function(){el.textContent=nums[ni];el.style.transform='translateY(0)';el.style.opacity='1';},300);
+          },1800);
+        })();
+        <\/script>`,
+
+        // Step 6 — Print/PDF
+        print: `
+        <div style="display:flex;flex-direction:column;gap:6px;padding:8px;height:100%;justify-content:center;">
+          <div style="font-size:0.58rem;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:1px;">Export Your Results</div>
+          <div style="display:flex;gap:5px;">
+            <div id="tsPrintRpt" style="flex:1;background:linear-gradient(135deg,#1a4a8a,#2563eb);border-radius:8px;padding:7px 4px;text-align:center;font-size:0.55rem;font-weight:800;color:white;animation:tsCalcPulse 1.8s 0.2s infinite;box-shadow:0 4px 12px rgba(26,74,138,0.5);">🖨️ Print Report</div>
+            <div id="tsPrintMark" style="flex:1;background:linear-gradient(135deg,#059669,#047857);border-radius:8px;padding:7px 4px;text-align:center;font-size:0.55rem;font-weight:800;color:white;animation:tsCalcPulse 1.8s 0.8s infinite;box-shadow:0 4px 12px rgba(5,150,105,0.4);">📄 Marksheet</div>
+          </div>
+          <div id="tsPdfMock" style="background:white;border-radius:8px;padding:8px;position:relative;animation:tsSlideIn 0.5s 0.3s both;overflow:hidden;min-height:80px;">
+            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;opacity:0.06;">
+              <div style="font-size:1.8rem;font-weight:900;color:#1a4a8a;letter-spacing:0.15em;transform:rotate(-20deg);">SRPTC</div>
+            </div>
+            <div style="height:3px;background:linear-gradient(90deg,#1a4a8a,#0ea5e9);border-radius:100px;margin-bottom:5px;"></div>
+            <div style="font-size:0.5rem;font-weight:800;color:#1a4a8a;text-align:center;text-transform:uppercase;letter-spacing:0.06em;">Academic Report</div>
+            <div style="font-size:0.44rem;color:#6b7280;text-align:center;margin-bottom:4px;">Sriram Polytechnic College</div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:3px;margin-bottom:4px;">
+              <div style="background:#f0f4ff;border-radius:4px;padding:3px;text-align:center;">
+                <div style="font-size:0.42rem;color:#6b7280;">SEM 1</div>
+                <div style="font-size:0.65rem;font-weight:800;color:#1a4a8a;">8.45</div>
+              </div>
+              <div style="background:#f0f4ff;border-radius:4px;padding:3px;text-align:center;">
+                <div style="font-size:0.42rem;color:#6b7280;">SEM 2</div>
+                <div style="font-size:0.65rem;font-weight:800;color:#1a4a8a;">9.10</div>
+              </div>
+              <div style="background:#f0fdf4;border-radius:4px;padding:3px;text-align:center;">
+                <div style="font-size:0.42rem;color:#6b7280;">CGPA</div>
+                <div style="font-size:0.65rem;font-weight:800;color:#059669;">8.78</div>
+              </div>
+            </div>
+            <div id="tsSavePdfAnim" style="display:none;background:linear-gradient(90deg,#059669,#047857);border-radius:4px;height:4px;width:0%;transition:width 1.2s linear;"></div>
+            <div id="tsSavedMsg" style="display:none;text-align:center;font-size:0.52rem;color:#059669;font-weight:700;margin-top:3px;">✅ PDF Saved!</div>
+          </div>
+        </div>
+        <script>
+        (function(){
+          function runAnim(){
+            var bar=document.getElementById('tsSavePdfAnim');
+            var msg=document.getElementById('tsSavedMsg');
+            if(!bar||!msg)return;
+            bar.style.display='block'; msg.style.display='none';
+            bar.style.width='0%';
+            setTimeout(function(){bar.style.width='100%';},50);
+            setTimeout(function(){bar.style.display='none';msg.style.display='block';},1300);
+            setTimeout(function(){msg.style.display='none';},2600);
+          }
+          setTimeout(runAnim,900);
+          setInterval(runAnim,3500);
+        })();
+        <\/script>`,
+
+        // Step 7 — Done / auto-save
+        done: `
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px;padding:8px;text-align:center;">
+          <div style="font-size:2.5rem;animation:tsBounce 0.7s cubic-bezier(0.34,1.56,0.64,1) both;">🎉</div>
+          <div style="font-size:0.68rem;font-weight:800;color:white;animation:tsFadeUp 0.5s 0.2s both;">You're all set!</div>
+          <div style="font-size:0.56rem;color:rgba(255,255,255,0.5);line-height:1.6;animation:tsFadeUp 0.5s 0.35s both;max-width:180px;">
+            Your data is <strong style="color:#fbbf24;">auto-saved</strong> as a draft. Log out and return anytime — nothing is lost.
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;width:100%;animation:tsFadeUp 0.5s 0.5s both;">
+            <div style="background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.25);border-radius:7px;padding:5px 8px;font-size:0.52rem;color:#34d399;">✅ Draft auto-saved to browser</div>
+            <div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.2);border-radius:7px;padding:5px 8px;font-size:0.52rem;color:#fbbf24;">📱 Works on mobile & desktop</div>
+            <div style="background:rgba(96,165,250,0.1);border:1px solid rgba(96,165,250,0.2);border-radius:7px;padding:5px 8px;font-size:0.52rem;color:#60a5fa;">🖨️ Export PDF anytime</div>
+          </div>
+        </div>`
+    };
+
+    const steps = [
+        { key:'welcome', title:'Welcome to CGPA Calculator!',    desc:'A quick visual guide to help you get started in under 60 seconds. Tap <strong>Next →</strong> to begin.', highlight:null, position:'center' },
+        { key:'roles',   title:'Step 1 — Choose Your Role',      desc:'Tap <strong>Student</strong> to log in with your name & register number. Or <strong>Admin</strong> to manage the system.', highlight:'.role-cards', position:'center' },
+        { key:'dept',    title:'Step 2 — Select Dept & Semester',desc:'Pick your <strong>Department</strong> and <strong>Semester</strong>. Subjects & credits load automatically.', highlight:null, position:'center' },
+        { key:'grades',  title:'Step 3 — Enter Your Grades',     desc:'Choose the <strong>Grade</strong> (O, A+, A, B+…) for each subject. Credits are pre-filled — just pick your grade!', highlight:null, position:'center' },
+        { key:'calcgpa', title:'Step 4 — Calculate GPA',         desc:'Hit <strong>Calculate GPA</strong> to get your semester result instantly, then <strong>Save</strong> it to your record.', highlight:null, position:'center' },
+        { key:'cgpa',    title:'Step 5 — Calculate CGPA',        desc:'Once you\'ve saved semester GPAs, press <strong>Calculate CGPA</strong> to see your overall result and classification.', highlight:null, position:'center' },
+        { key:'print',   title:'Step 6 — Export as PDF',         desc:'Use <strong>Print Report</strong> or <strong>Print Marksheet</strong> to download a beautiful official document.', highlight:null, position:'center' },
+        { key:'done',    title:"You're all set! 🚀",             desc:'Your progress is auto-saved. Come back anytime — everything restores. Happy calculating!', highlight:null, position:'center' }
+    ];
+
+    let currentStep = 0;
+
+    /* ── CSS ── */
+    const style = document.createElement('style');
+    style.textContent = `
+        /* ── keyframes ── */
+        @keyframes tsBounce  { from{transform:scale(0.3) rotate(-15deg);opacity:0} to{transform:scale(1) rotate(0deg);opacity:1} }
+        @keyframes tsFadeUp  { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes tsSlideIn { from{opacity:0;transform:translateX(-12px)} to{opacity:1;transform:translateX(0)} }
+        @keyframes tsPulse   { 0%,100%{transform:scale(1);opacity:0.7} 50%{transform:scale(1.5);opacity:1} }
+        @keyframes tsCalcPulse { 0%,100%{box-shadow:0 4px 14px rgba(26,74,138,0.5)} 50%{box-shadow:0 6px 24px rgba(26,74,138,0.9),0 0 0 4px rgba(26,74,138,0.2)} }
+        @keyframes tourCardIn  { from{opacity:0;transform:translateY(20px) scale(0.95)} to{opacity:1;transform:translateY(0) scale(1)} }
+
+        /* ── backdrop ── */
+        #tourBackdrop {
+            position:fixed; inset:0; z-index:99000;
+            background:rgba(3,8,20,0.88);
+            backdrop-filter:blur(4px);
+            pointer-events:none;
+            transition:opacity 0.4s;
+        }
+
+        /* ── spotlight ring ── */
+        #tourSpotlight {
+            position:fixed; z-index:99001;
+            border-radius:16px;
+            box-shadow: 0 0 0 4000px rgba(3,8,20,0.84),
+                        0 0 0 2.5px rgba(245,158,11,0.85),
+                        0 0 28px 8px rgba(245,158,11,0.3);
+            transition: left 0.45s cubic-bezier(0.34,1.2,0.64,1),
+                        top  0.45s cubic-bezier(0.34,1.2,0.64,1),
+                        width 0.45s cubic-bezier(0.34,1.2,0.64,1),
+                        height 0.45s cubic-bezier(0.34,1.2,0.64,1),
+                        opacity 0.3s;
+            pointer-events:none;
+            display:none;
+        }
+
+        /* ── main card ── */
+        #tourCard {
+            position:fixed; z-index:99002;
+            background:linear-gradient(150deg,#0d2240 0%,#09182f 100%);
+            border:1px solid rgba(245,158,11,0.3);
+            border-radius:22px;
+            width:min(430px,93vw);
+            box-shadow:0 28px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04);
+            font-family:'Sora',sans-serif;
+            overflow:hidden;
+            animation:tourCardIn 0.42s cubic-bezier(0.34,1.26,0.64,1) both;
+        }
+
+        /* ── phone screen preview ── */
+        .tour-screen-wrap {
+            background:linear-gradient(145deg,#0a1525,#06101e);
+            border-bottom:1px solid rgba(255,255,255,0.07);
+            padding:10px 12px 6px;
+            position:relative;
+            overflow:hidden;
+        }
+        .tour-screen-label {
+            font-size:0.52rem; font-weight:700; letter-spacing:0.08em;
+            text-transform:uppercase; color:rgba(245,158,11,0.7);
+            margin-bottom:5px; display:flex; align-items:center; gap:4px;
+        }
+        .tour-screen-label::before {
+            content:''; display:inline-block; width:5px; height:5px;
+            background:#f59e0b; border-radius:50%;
+            animation:tsPulse 1s infinite;
+        }
+        .tour-phone {
+            background:linear-gradient(145deg,#101e35,#0c172a);
+            border:1.5px solid rgba(255,255,255,0.12);
+            border-radius:14px;
+            min-height:150px;
+            position:relative;
+            overflow:hidden;
+        }
+        .tour-phone-bar {
+            height:3px;
+            background:linear-gradient(90deg,#f59e0b,#fb923c,#f59e0b);
+            background-size:200% 100%;
+            animation:tourBarScroll 2s linear infinite;
+        }
+        @keyframes tourBarScroll { 0%{background-position:200% 0} 100%{background-position:0 0} }
+
+        .tour-phone-body { padding:6px; }
+
+        /* ── text section ── */
+        .tour-text-wrap { padding:1rem 1.2rem 0.8rem; }
+
+        .tour-step-label {
+            font-size:0.62rem; font-weight:700; color:rgba(245,158,11,0.6);
+            text-transform:uppercase; letter-spacing:0.08em;
+            font-family:'JetBrains Mono',monospace; margin-bottom:0.35rem;
+        }
+        .tour-title {
+            font-size:1rem; font-weight:800; color:white; line-height:1.25;
+            margin-bottom:0.4rem;
+        }
+        .tour-desc {
+            font-size:0.78rem; color:rgba(255,255,255,0.6); line-height:1.65;
+        }
+        .tour-desc strong { color:#fbbf24; font-weight:700; }
+
+        /* ── progress ── */
+        .tour-progress {
+            display:flex; justify-content:center; gap:5px;
+            padding:0.6rem 1.2rem 0;
+        }
+        .tour-dot {
+            height:4px; border-radius:100px;
+            background:rgba(255,255,255,0.15);
+            transition:all 0.35s cubic-bezier(0.34,1.4,0.64,1);
+            width:18px;
+        }
+        .tour-dot.active { background:#f59e0b; width:32px; box-shadow:0 0 8px rgba(245,158,11,0.6); }
+        .tour-dot.done   { background:rgba(245,158,11,0.4); }
+
+        /* ── actions ── */
+        .tour-actions {
+            display:flex; gap:0.6rem; padding:0.7rem 1.2rem 1rem;
+        }
+        .tour-btn {
+            flex:1; padding:0.6rem 0.8rem; border:none; border-radius:100px;
+            font-family:'Sora',sans-serif; font-size:0.82rem; font-weight:700;
+            cursor:pointer; transition:all 0.2s;
+        }
+        .tour-btn-primary {
+            background:linear-gradient(135deg,#f59e0b,#d97706);
+            color:#0b1f3a;
+            box-shadow:0 4px 16px rgba(245,158,11,0.4);
+        }
+        .tour-btn-primary:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(245,158,11,0.55); }
+        .tour-btn-ghost {
+            background:rgba(255,255,255,0.07);
+            border:1px solid rgba(255,255,255,0.12);
+            color:rgba(255,255,255,0.5);
+        }
+        .tour-btn-ghost:hover { background:rgba(255,255,255,0.13); color:white; }
+
+        /* ── arrow ── */
+        #tourArrow {
+            position:fixed; z-index:99003; pointer-events:none;
+            width:0; height:0;
+            transition:all 0.45s cubic-bezier(0.34,1.2,0.64,1);
+            opacity:0;
+        }
+        #tourArrow.up   { border-left:10px solid transparent; border-right:10px solid transparent; border-bottom:12px solid rgba(245,158,11,0.8); }
+        #tourArrow.down { border-left:10px solid transparent; border-right:10px solid transparent; border-top:12px solid rgba(245,158,11,0.8); }
+
+        /* ── skip ── */
+        #tourSkipAll {
+            position:fixed; z-index:99003;
+            bottom:1.2rem; left:50%; transform:translateX(-50%);
+            background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1);
+            color:rgba(255,255,255,0.3); font-family:'Sora',sans-serif;
+            font-size:0.72rem; padding:0.35rem 1.1rem; border-radius:100px;
+            cursor:pointer; transition:all 0.2s; white-space:nowrap;
+            pointer-events:none;
+        }
+        #tourSkipAll:hover { background:rgba(239,68,68,0.15); color:#f87171; border-color:rgba(239,68,68,0.25); }
+
+        /* scrollbar inside phone */
+        .tour-phone ::-webkit-scrollbar { display:none; }
+    `;
+    document.head.appendChild(style);
+
+    /* ── DOM ── */
+    const backdrop = document.createElement('div'); backdrop.id = 'tourBackdrop';
+    const spotlight = document.createElement('div'); spotlight.id = 'tourSpotlight';
+    const card = document.createElement('div'); card.id = 'tourCard';
+    const arrow = document.createElement('div'); arrow.id = 'tourArrow';
+    const skipAll = document.createElement('button'); skipAll.id = 'tourSkipAll'; skipAll.textContent = '✕ Skip Tutorial';
+    document.body.append(backdrop, spotlight, card, arrow, skipAll);
+
+    /* ── helpers ── */
+    function getRect(sel) {
+        if (!sel) return null;
+        const el = document.querySelector(sel);
+        if (!el) return null;
+        return el.getBoundingClientRect();
+    }
+
+    function positionSpotlight(rect) {
+        if (!rect) { spotlight.style.display = 'none'; return; }
+        const p = 10;
+        spotlight.style.display = 'block';
+        spotlight.style.opacity = '1';
+        spotlight.style.left   = (rect.left - p) + 'px';
+        spotlight.style.top    = (rect.top  - p) + 'px';
+        spotlight.style.width  = (rect.width  + p*2) + 'px';
+        spotlight.style.height = (rect.height + p*2) + 'px';
+    }
+
+    function positionCard(rect, position) {
+        const cw = Math.min(430, window.innerWidth * 0.93);
+        const ch = card.offsetHeight || 480;
+        const gap = 16;
+        let top, left;
+
+        if (!rect || position === 'center') {
+            top  = Math.max(10, (window.innerHeight - ch) / 2);
+            left = (window.innerWidth - cw) / 2;
+            arrow.style.opacity = '0';
+        } else if (position === 'bottom') {
+            top  = rect.bottom + gap;
+            if (top + ch > window.innerHeight - 10) top = rect.top - ch - gap;
+            left = Math.max(8, Math.min(rect.left + rect.width/2 - cw/2, window.innerWidth - cw - 8));
+            arrow.className = 'up';
+            arrow.style.opacity = '1';
+            arrow.style.left = (rect.left + rect.width/2 - 10) + 'px';
+            arrow.style.top  = (rect.bottom + gap - 13) + 'px';
+        } else { // top
+            top = rect.top - ch - gap;
+            if (top < 10) { top = rect.bottom + gap; arrow.className = 'up'; arrow.style.top = (rect.bottom + gap - 13) + 'px'; }
+            else { arrow.className = 'down'; arrow.style.top = (top + ch) + 'px'; }
+            left = Math.max(8, Math.min(rect.left + rect.width/2 - cw/2, window.innerWidth - cw - 8));
+            arrow.style.opacity = '1';
+            arrow.style.left = (rect.left + rect.width/2 - 10) + 'px';
+        }
+
+        card.style.top  = Math.max(8, top) + 'px';
+        card.style.left = left + 'px';
+        card.style.width = cw + 'px';
+    }
+
+    function renderStep(idx) {
+        const s = steps[idx];
+        const isLast = idx === steps.length - 1;
+        const screenKey = s.key;
+        const screenHTML = screens[screenKey] || '';
+
+        const dots = steps.map((_, i) =>
+            `<div class="tour-dot ${i < idx ? 'done' : i === idx ? 'active' : ''}"></div>`
+        ).join('');
+
+        const stepLabel = idx === 0 ? 'Introduction' :
+                          idx === steps.length-1 ? 'Complete ✓' :
+                          `Step ${idx} of ${steps.length - 2}`;
+
+        card.innerHTML = `
+            <div class="tour-screen-wrap">
+                <div class="tour-screen-label">Live Preview</div>
+                <div class="tour-phone">
+                    <div class="tour-phone-bar"></div>
+                    <div class="tour-phone-body">${screenHTML}</div>
+                </div>
+            </div>
+            <div class="tour-progress">${dots}</div>
+            <div class="tour-text-wrap">
+                <div class="tour-step-label">${stepLabel}</div>
+                <div class="tour-title">${s.title}</div>
+                <div class="tour-desc">${s.desc}</div>
+            </div>
+            <div class="tour-actions">
+                ${idx > 0 ? `<button class="tour-btn tour-btn-ghost" id="tourBack">← Back</button>` : ''}
+                <button class="tour-btn tour-btn-primary" id="tourNext">
+                    ${isLast ? '🎉 Get Started' : 'Next →'}
+                </button>
+            </div>
+        `;
+
+        // Re-trigger animation
+        card.style.animation = 'none';
+        void card.offsetWidth;
+        card.style.animation = 'tourCardIn 0.42s cubic-bezier(0.34,1.26,0.64,1) both';
+
+        // Run inline scripts in screen HTML
+        card.querySelectorAll('script').forEach(s => {
+            const ns = document.createElement('script');
+            ns.textContent = s.textContent;
+            document.body.appendChild(ns);
+            setTimeout(() => ns.remove(), 100);
+        });
+
+        // Wait a frame so card has layout then position
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                const rect = getRect(s.highlight);
+                positionSpotlight(rect);
+                positionCard(rect, s.position);
+            });
+        });
+
+        document.getElementById('tourNext').onclick = () => advance(1);
+        const bb = document.getElementById('tourBack');
+        if (bb) bb.onclick = () => advance(-1);
+    }
+
+    function advance(dir) {
+        const next = currentStep + dir;
+        if (next >= steps.length) { closeTour(); return; }
+        if (next < 0) return;
+        currentStep = next;
+        renderStep(currentStep);
+    }
+
+    function closeTour() {
+        [backdrop, spotlight, card, arrow, skipAll].forEach(el => {
+            el.style.transition = 'opacity 0.4s';
+            el.style.opacity = '0';
+            setTimeout(() => el.remove(), 430);
+        });
+        style.remove();
+    }
+
+    skipAll.onclick = closeTour;
+
+    setTimeout(() => {
+        backdrop.style.pointerEvents = 'auto';
+        skipAll.style.pointerEvents  = 'auto';
+        renderStep(0);
+    }, 300);
+
+    window.addEventListener('resize', () => {
+        const s = steps[currentStep];
+        const rect = getRect(s.highlight);
+        positionSpotlight(rect);
+        positionCard(rect, s.position);
+    });
+}
 
 // ============================================================
 // AUTO-LOGOUT ON TAB CLOSE / WINDOW CLOSE
