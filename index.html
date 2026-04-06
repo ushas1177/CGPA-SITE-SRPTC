@@ -1355,6 +1355,180 @@
 
 <script>
 // ============================================================
+// SECURITY SHIELD — Full Protection Suite
+// ============================================================
+(function() {
+
+    // ── 1. Right-click toast message ──────────────────────────
+    function showSecurityToast(msg) {
+        let toast = document.getElementById('__secToast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = '__secToast';
+            toast.style.cssText = [
+                'position:fixed','bottom:2rem','left:50%',
+                'transform:translateX(-50%) translateY(80px)',
+                'background:linear-gradient(135deg,#0b1f3a,#1a4a8a)',
+                'color:#fff','padding:0.75rem 1.6rem',
+                'border-radius:100px','font-family:Sora,sans-serif',
+                'font-size:0.85rem','font-weight:700',
+                'border:1px solid rgba(245,158,11,0.5)',
+                'box-shadow:0 8px 32px rgba(0,0,0,0.55),0 0 0 1px rgba(245,158,11,0.2)',
+                'z-index:999999','pointer-events:none',
+                'transition:transform 0.4s cubic-bezier(0.34,1.56,0.64,1),opacity 0.4s',
+                'opacity:0','display:flex','align-items:center','gap:0.6rem',
+                'white-space:nowrap'
+            ].join(';');
+            document.body.appendChild(toast);
+        }
+        toast.innerHTML = '🔒 ' + msg;
+        clearTimeout(toast._t1); clearTimeout(toast._t2);
+        toast.style.transform = 'translateX(-50%) translateY(0)';
+        toast.style.opacity = '1';
+        toast._t1 = setTimeout(() => {
+            toast.style.transform = 'translateX(-50%) translateY(80px)';
+            toast.style.opacity = '0';
+        }, 2800);
+    }
+
+    // ── 2. Disable right-click ────────────────────────────────
+    document.addEventListener('contextmenu', function(e) {
+        e.preventDefault();
+        showSecurityToast('Right-click is disabled on this page');
+        return false;
+    });
+
+    // ── 3. Block DevTools keyboard shortcuts ──────────────────
+    document.addEventListener('keydown', function(e) {
+        var tag = (document.activeElement || {}).tagName;
+        var inField = (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT');
+
+        // F12
+        if (e.key === 'F12') {
+            e.preventDefault();
+            showSecurityToast('Developer tools are disabled');
+            return false;
+        }
+        // Ctrl+Shift+I / Cmd+Opt+I
+        if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'I' || e.key === 'i')) {
+            e.preventDefault();
+            showSecurityToast('Inspect element is disabled');
+            return false;
+        }
+        // Ctrl+Shift+J (Console)
+        if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'J' || e.key === 'j')) {
+            e.preventDefault();
+            showSecurityToast('Developer console is disabled');
+            return false;
+        }
+        // Ctrl+Shift+C (Element picker)
+        if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'C' || e.key === 'c')) {
+            e.preventDefault();
+            showSecurityToast('Inspect element is disabled');
+            return false;
+        }
+        // Ctrl+U (View Source)
+        if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 'u' || e.key === 'U') && !inField) {
+            e.preventDefault();
+            showSecurityToast('View source is disabled on this page');
+            return false;
+        }
+        // Ctrl+S (Save page) — always block
+        if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 's' || e.key === 'S')) {
+            e.preventDefault();
+            showSecurityToast('Saving this page is not permitted');
+            return false;
+        }
+        // Ctrl+A (Select all) — only block OUTSIDE input fields
+        if ((e.ctrlKey || e.metaKey) && (e.key === 'a' || e.key === 'A') && !inField) {
+            e.preventDefault();
+            showSecurityToast('Text selection is restricted');
+            return false;
+        }
+        // Ctrl+C (Copy) — only block OUTSIDE input fields
+        if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 'c' || e.key === 'C') && !inField) {
+            e.preventDefault();
+            showSecurityToast('Copying content is not permitted');
+            return false;
+        }
+        // Ctrl+P (Print) — always block, use in-app button
+        if ((e.ctrlKey || e.metaKey) && (e.key === 'p' || e.key === 'P')) {
+            e.preventDefault();
+            showSecurityToast('Use the in-app Print / Save PDF button');
+            return false;
+        }
+    });
+
+    // ── 4. Disable text selection ONLY on non-interactive elements ──
+    // CRITICAL: Must allow INPUT, TEXTAREA, SELECT to work fully
+    document.addEventListener('selectstart', function(e) {
+        var el  = e.target;
+        var tag = el ? el.tagName : '';
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
+        if (el && el.closest && el.closest('input, textarea, select, .modal-box, .field-input')) return true;
+        e.preventDefault();
+        return false;
+    });
+
+    // ── 5. Disable drag on images only ────────────────────────
+    document.addEventListener('dragstart', function(e) {
+        if (e.target && e.target.tagName === 'IMG') {
+            e.preventDefault();
+            return false;
+        }
+    });
+
+    // ── 6. Block copy outside input fields ────────────────────
+    document.addEventListener('copy', function(e) {
+        var tag = (document.activeElement || {}).tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA') return true;
+        e.preventDefault();
+        showSecurityToast('Copying content is not permitted');
+        return false;
+    });
+
+    // ── 7. DevTools open detection (size-change heuristic) ────
+    (function devtoolsDetect() {
+        var threshold = 160;
+        var warned = false;
+        setInterval(function() {
+            var widthDiff  = window.outerWidth  - window.innerWidth;
+            var heightDiff = window.outerHeight - window.innerHeight;
+            if ((widthDiff > threshold || heightDiff > threshold) && !warned) {
+                warned = true;
+                showSecurityToast('Developer tools detected — access is monitored');
+            }
+            if (widthDiff <= threshold && heightDiff <= threshold) warned = false;
+        }, 1000);
+    })();
+
+    // ── 8. CSS: safe user-select — never blocks form elements ─
+    var style = document.createElement('style');
+    style.textContent =
+        'body { -webkit-user-select:none; -moz-user-select:none; user-select:none; }' +
+        'input, textarea, select, [contenteditable] {' +
+        '  -webkit-user-select:text !important;' +
+        '  -moz-user-select:text !important;' +
+        '  user-select:text !important;' +
+        '  pointer-events:auto !important;' +
+        '  cursor:text !important;' +
+        '}' +
+        '.field-input, .sem-gpa-input, .search-input, .subject-name-field,' +
+        '.credit-field, .admin-select, .grade-select, .credit-input {' +
+        '  -webkit-user-select:text !important;' +
+        '  user-select:text !important;' +
+        '  pointer-events:auto !important;' +
+        '}' +
+        'button, .role-card, .modal-btn, .admin-btn, .admin-tab {' +
+        '  pointer-events:auto !important;' +
+        '  cursor:pointer !important;' +
+        '}' +
+        'img { pointer-events:none; -webkit-user-drag:none; }';
+    document.head.appendChild(style);
+
+})(); // end security shield
+
+// ============================================================
 // SUBJECT DATA
 // ============================================================
 const SEM1_COMMON = [["TAMILAR MARABU",2],["BASIC MATHEMATICS",4],["BASIC PHYSICS",3],["BASIC CHEMISTRY",3],["COMMUNICATIVE ENGLISH 1",2],["BASIC WORKSHOP PRACTISE",2],["DIGITAL WORKPLACE SKILLS",2],["Advanced Skill Certification - II",2]];
@@ -1531,7 +1705,7 @@ function addStudentLog(name, regNo, action = "login") {
 // ============================================================
 // MODAL FACTORY
 // ============================================================
-function createModal({ icon, title, subtitle, fields, primaryBtn, primaryBtnClass, onSubmit, showClose = true }) {
+function createModal({ icon, title, subtitle, fields, primaryBtn, primaryBtnClass, onSubmit, showClose = true, showCancel = false, onCancel = null }) {
     const uid = '_' + Math.random().toString(36).slice(2, 8);
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
@@ -1542,6 +1716,9 @@ function createModal({ icon, title, subtitle, fields, primaryBtn, primaryBtnClas
             '<input class="field-input" data-fid="' + f.id + '" type="' + (f.type || 'text') + '" placeholder="' + f.placeholder + '" value="' + escapeHtml(f.value || '') + '" ' + (f.autocomplete ? 'autocomplete="' + f.autocomplete + '"' : '') + '>' +
             '</div>';
     });
+    const cancelBtnHtml = showCancel
+        ? '<button class="modal-btn modal-btn-cancel" id="mCancel' + uid + '" style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.65);margin-top:0.4rem;">✕ Cancel</button>'
+        : '';
     overlay.innerHTML =
         '<div class="modal-box">' +
         (showClose ? '<button class="modal-close" id="mClose' + uid + '">&#10005;</button>' : '') +
@@ -1551,6 +1728,7 @@ function createModal({ icon, title, subtitle, fields, primaryBtn, primaryBtnClas
         fieldsHtml +
         '<div class="error-msg" id="mErr' + uid + '" style="display:none;"></div>' +
         '<button class="modal-btn ' + (primaryBtnClass || 'modal-btn-primary') + '" id="mSubmit' + uid + '">' + primaryBtn + '</button>' +
+        cancelBtnHtml +
         '</div>';
     document.body.appendChild(overlay);
 
@@ -1568,6 +1746,15 @@ function createModal({ icon, title, subtitle, fields, primaryBtn, primaryBtnClas
         const cb = overlay.querySelector('[id^="mClose"]');
         if (cb) cb.onclick = () => overlay.remove();
         overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+    }
+    if (showCancel) {
+        const cancelBtn = overlay.querySelector('[id^="mCancel"]');
+        if (cancelBtn) {
+            cancelBtn.onclick = () => {
+                overlay.remove();
+                if (typeof onCancel === 'function') onCancel();
+            };
+        }
     }
     return overlay;
 }
@@ -1589,6 +1776,11 @@ function showStudentModal(prefill = {}) {
         title: 'Student Login',
         subtitle: 'Enter your details to access the GPA Calculator',
         showClose: !!(prefill.name),
+        showCancel: !(prefill.name),
+        onCancel: () => {
+            // If cancelling from fresh login, just leave the landing page visible
+            document.getElementById('landingPage').style.display = 'flex';
+        },
         fields: [
             { id: 'inputName', label: 'Full Name',       placeholder: 'e.g. Arjun Kumar', value: prefill.name || '', autocomplete: 'off' },
             { id: 'inputReg',  label: 'Register Number', placeholder: 'e.g. ***********',    value: prefill.reg  || '' }
@@ -1700,40 +1892,291 @@ function logoutStudent() {
 }
 
 // ============================================================
+// ADMIN BRUTE-FORCE PROTECTION
+// Keys: admin_failCount, admin_lockedUntil, admin_secretKey
+// ============================================================
+const ADMIN_MAX_ATTEMPTS  = 3;
+const ADMIN_LOCKOUT_MS    = 15 * 60 * 1000; // 15 minutes
+const ADMIN_SECRET_DEFAULT = 'SRPTC@2024';   // changeable via profile
+
+function getAdminFailCount()  { return parseInt(localStorage.getItem('admin_failCount')  || '0'); }
+function getAdminLockedUntil(){ return parseInt(localStorage.getItem('admin_lockedUntil')|| '0'); }
+function isAdminLocked()      { return Date.now() < getAdminLockedUntil(); }
+function resetAdminFails()    { localStorage.removeItem('admin_failCount'); localStorage.removeItem('admin_lockedUntil'); }
+function incrementAdminFail() {
+    const c = getAdminFailCount() + 1;
+    localStorage.setItem('admin_failCount', c);
+    if (c >= ADMIN_MAX_ATTEMPTS) {
+        localStorage.setItem('admin_lockedUntil', Date.now() + ADMIN_LOCKOUT_MS);
+    }
+    return c;
+}
+
+// ── Generate & download the Python email-alert script ────────
+function downloadAlertScript(attemptTime, failedUser) {
+    const py = `#!/usr/bin/env python3
+# ================================================================
+# CGPA SITE — Admin Brute-Force Alert Mailer
+# Uses ONLY Python built-ins: smtplib + email (no pip needed)
+# Run:  python alert_mailer.py
+# ================================================================
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+import datetime
+
+# ── CONFIGURE THESE ──────────────────────────────────────────
+SENDER_EMAIL    = "your_gmail@gmail.com"       # Gmail address you send FROM
+SENDER_PASSWORD = "your_app_password_here"     # Gmail App Password (16-char)
+RECEIVER_EMAIL  = "admin_alert@yourdomain.com" # Where to receive the alert
+SMTP_HOST       = "smtp.gmail.com"
+SMTP_PORT       = 587
+# ─────────────────────────────────────────────────────────────
+
+ATTEMPT_TIME  = "${attemptTime}"
+FAILED_USER   = "${failedUser || 'unknown'}"
+SITE_NAME     = "SRPTC CGPA Calculator"
+
+html_body = f"""
+<html><body style="font-family:Arial,sans-serif;background:#f4f4f4;padding:20px;">
+<div style="max-width:560px;margin:0 auto;background:white;border-radius:12px;
+            box-shadow:0 4px 20px rgba(0,0,0,0.1);overflow:hidden;">
+  <div style="background:linear-gradient(135deg,#dc2626,#b91c1c);padding:24px 28px;">
+    <h2 style="color:white;margin:0;font-size:22px;">&#x26A0; Security Alert</h2>
+    <p style="color:rgba(255,255,255,0.85);margin:6px 0 0;font-size:14px;">{SITE_NAME}</p>
+  </div>
+  <div style="padding:28px;">
+    <p style="font-size:15px;color:#1e293b;">
+      <strong>3 consecutive failed admin login attempts</strong> have been detected.
+      The admin login has been <span style="color:#dc2626;font-weight:700;">locked</span>.
+    </p>
+    <table style="width:100%;border-collapse:collapse;margin:18px 0;font-size:14px;">
+      <tr style="background:#fef2f2;">
+        <td style="padding:10px 14px;border:1px solid #fecaca;font-weight:700;color:#991b1b;width:40%;">Time</td>
+        <td style="padding:10px 14px;border:1px solid #fecaca;color:#1e293b;">{ATTEMPT_TIME}</td>
+      </tr>
+      <tr>
+        <td style="padding:10px 14px;border:1px solid #e2e8f0;font-weight:700;color:#475569;">Username Tried</td>
+        <td style="padding:10px 14px;border:1px solid #e2e8f0;color:#1e293b;font-family:monospace;">{FAILED_USER}</td>
+      </tr>
+      <tr style="background:#fef2f2;">
+        <td style="padding:10px 14px;border:1px solid #fecaca;font-weight:700;color:#991b1b;">Status</td>
+        <td style="padding:10px 14px;border:1px solid #fecaca;color:#dc2626;font-weight:700;">LOCKED for 15 minutes</td>
+      </tr>
+    </table>
+    <p style="font-size:13px;color:#64748b;border-top:1px solid #e2e8f0;padding-top:14px;">
+      To unlock the admin panel, use the <strong>Secret Key</strong> on the login page.<br>
+      If this was not you, change your admin credentials immediately.
+    </p>
+  </div>
+  <div style="background:#f8fafc;padding:14px 28px;font-size:12px;color:#94a3b8;">
+    Auto-generated by {SITE_NAME} Security System &bull; {datetime.datetime.now().strftime('%Y-%m-%d')}
+  </div>
+</div>
+</body></html>
+"""
+
+def send_alert():
+    msg = MIMEMultipart('alternative')
+    msg['Subject'] = f"\\u26A0\\uFE0F Security Alert: Admin Brute-Force on {SITE_NAME}"
+    msg['From']    = SENDER_EMAIL
+    msg['To']      = RECEIVER_EMAIL
+    msg.attach(MIMEText(html_body, 'html'))
+    try:
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+            server.ehlo()
+            server.starttls()
+            server.login(SENDER_EMAIL, SENDER_PASSWORD)
+            server.sendmail(SENDER_EMAIL, RECEIVER_EMAIL, msg.as_string())
+        print("✅ Alert email sent successfully to", RECEIVER_EMAIL)
+    except smtplib.SMTPAuthenticationError:
+        print("❌ Authentication failed. Make sure you use a Gmail App Password.")
+        print("   Guide: myaccount.google.com > Security > App Passwords")
+    except Exception as e:
+        print(f"❌ Failed to send email: {e}")
+
+if __name__ == "__main__":
+    print(f"Sending alert for {ATTEMPT_TIME} attempt by '{FAILED_USER}'...")
+    send_alert()
+`;
+    const blob = new Blob([py], { type: 'text/plain' });
+    const a    = document.createElement('a');
+    a.href     = URL.createObjectURL(blob);
+    a.download = 'admin_alert_mailer.py';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
+// ── Countdown timer helper ────────────────────────────────────
+function formatCountdown(ms) {
+    if (ms <= 0) return '0:00';
+    const m = Math.floor(ms / 60000);
+    const s = Math.floor((ms % 60000) / 1000);
+    return `${m}:${s.toString().padStart(2,'0')}`;
+}
+
+// ── Secret Key unlock modal ───────────────────────────────────
+function showSecretKeyModal(onUnlocked) {
+    const uid = '_sk' + Math.random().toString(36).slice(2,8);
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `
+    <div class="modal-box" style="border:1px solid rgba(239,68,68,0.35);max-width:400px;">
+        <span class="modal-icon">🗝️</span>
+        <div class="modal-title" style="color:#f87171;">Admin Access Locked</div>
+        <div class="modal-subtitle">Too many failed attempts. Enter the secret key to unlock.</div>
+        <div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);border-radius:0.8rem;
+                    padding:0.9rem 1.1rem;margin-bottom:1.2rem;display:flex;align-items:center;gap:0.7rem;">
+            <span style="font-size:1.4rem;">⏱️</span>
+            <div>
+                <div style="font-size:0.72rem;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.06em;">Auto-unlock in</div>
+                <div id="lockCountdown${uid}" style="font-family:'JetBrains Mono',monospace;font-size:1.3rem;font-weight:800;color:#f87171;">--:--</div>
+            </div>
+        </div>
+        <div class="field-group">
+            <label class="field-label">Secret Key</label>
+            <input class="field-input" id="secretKeyInput${uid}" type="password" placeholder="Enter secret key" autocomplete="off">
+        </div>
+        <div class="error-msg" id="skErr${uid}" style="display:none;"></div>
+        <button class="modal-btn modal-btn-danger" id="skSubmit${uid}" style="margin-top:0.8rem;">🔓 Unlock Admin Panel</button>
+        <button class="modal-btn" id="skCancel${uid}"
+            style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);
+                   color:rgba(255,255,255,0.6);margin-top:0.4rem;">✕ Cancel</button>
+        <div style="margin-top:1rem;padding-top:0.8rem;border-top:1px solid rgba(255,255,255,0.07);
+                    font-size:0.72rem;color:rgba(255,255,255,0.3);text-align:center;">
+            An alert email script has been downloaded to your device.
+        </div>
+    </div>`;
+    document.body.appendChild(overlay);
+
+    // Countdown timer
+    const cdEl = overlay.querySelector(`#lockCountdown${uid}`);
+    const cdInterval = setInterval(() => {
+        const remaining = getAdminLockedUntil() - Date.now();
+        if (remaining <= 0) {
+            cdEl.textContent = '0:00';
+            cdEl.style.color = '#34d399';
+            cdEl.textContent = 'Unlocked! Reload or cancel.';
+            clearInterval(cdInterval);
+        } else {
+            cdEl.textContent = formatCountdown(remaining);
+        }
+    }, 500);
+
+    const showErr = (m) => {
+        const e = overlay.querySelector(`#skErr${uid}`);
+        e.textContent = m; e.style.display = 'block';
+    };
+
+    overlay.querySelector(`#skSubmit${uid}`).onclick = () => {
+        const entered = overlay.querySelector(`#secretKeyInput${uid}`).value.trim();
+        const stored  = localStorage.getItem('admin_secretKey') || ADMIN_SECRET_DEFAULT;
+        if (entered === stored) {
+            clearInterval(cdInterval);
+            resetAdminFails();
+            overlay.remove();
+            onUnlocked();
+        } else {
+            showErr('❌ Incorrect secret key. Try again.');
+        }
+    };
+    overlay.querySelector(`#skCancel${uid}`).onclick = () => {
+        clearInterval(cdInterval);
+        overlay.remove();
+    };
+    // Allow Enter key
+    overlay.querySelector(`#secretKeyInput${uid}`).addEventListener('keydown', e => {
+        if (e.key === 'Enter') overlay.querySelector(`#skSubmit${uid}`).click();
+    });
+}
+
+// ============================================================
 // ADMIN LOGIN MODAL
 // ============================================================
 function showAdminLoginModal() {
-    createModal({
-        icon: '🔐',
-        title: 'Admin Login',
-        subtitle: 'Enter your admin credentials to continue',
-        fields: [
-            { id: 'adminUser', label: 'Username', placeholder: 'username', autocomplete: 'off' },
-            { id: 'adminPass', label: 'Password', type: 'password', placeholder: '••••••••' }
-        ],
-        primaryBtn: 'Login to Dashboard',
-        primaryBtnClass: 'modal-btn-danger',
-        onSubmit: async (overlay, showError, getVal) => {
-            const user = getVal('adminUser').trim();
-            const pass = getVal('adminPass');
-            // Default hash for 'srirampolytechnic' — overridden by localStorage if admin has changed credentials
-            const DEFAULT_AH = '2e1f8f21d238abea1d99e609c3d94eb253c3023f957c48bfc0f19a4812400ec6';
-            const storedUser = localStorage.getItem('admin_username') || 'admin';
-            const storedHash = localStorage.getItem('admin_passhash') || DEFAULT_AH;
-            async function _sh(s) {
-                const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
-                return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
-            }
-            const hashed = await _sh(pass);
-            if (user === storedUser && hashed === storedHash) {
+    // ── Check if locked ───────────────────────────────────────
+    if (isAdminLocked()) {
+        showSecretKeyModal(() => showAdminLoginModal());
+        return;
+    }
+
+    const uid = '_adm' + Math.random().toString(36).slice(2,8);
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+
+    const remaining = ADMIN_MAX_ATTEMPTS - getAdminFailCount();
+
+    overlay.innerHTML = `
+    <div class="modal-box" style="max-width:420px;">
+        <span class="modal-icon">🔐</span>
+        <div class="modal-title">Admin Login</div>
+        <div class="modal-subtitle">Enter your admin credentials to continue</div>
+        ${getAdminFailCount() > 0 ? `
+        <div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:0.7rem;
+                    padding:0.6rem 0.9rem;margin-bottom:1rem;font-size:0.8rem;color:#fbbf24;display:flex;align-items:center;gap:0.5rem;">
+            ⚠️ <span><strong>${remaining} attempt${remaining !== 1 ? 's' : ''}</strong> remaining before lockout</span>
+        </div>` : ''}
+        <div class="field-group">
+            <label class="field-label">Username</label>
+            <input class="field-input" id="adminUser${uid}" type="text" placeholder="username" autocomplete="off">
+        </div>
+        <div class="field-group">
+            <label class="field-label">Password</label>
+            <input class="field-input" id="adminPass${uid}" type="password" placeholder="••••••••">
+        </div>
+        <div class="error-msg" id="admErr${uid}" style="display:none;"></div>
+        <button class="modal-btn modal-btn-danger" id="admSubmit${uid}" style="margin-top:0.8rem;">Login to Dashboard</button>
+        <button class="modal-btn" id="admCancel${uid}"
+            style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);
+                   color:rgba(255,255,255,0.6);margin-top:0.4rem;">✕ Cancel</button>
+    </div>`;
+    document.body.appendChild(overlay);
+
+    const showError = (m) => {
+        const e = overlay.querySelector(`#admErr${uid}`);
+        e.textContent = m; e.style.display = 'block';
+    };
+
+    const DEFAULT_AH = '2e1f8f21d238abea1d99e609c3d94eb253c3023f957c48bfc0f19a4812400ec6';
+    async function _sh(s) {
+        const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+        return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+    }
+
+    overlay.querySelector(`#admSubmit${uid}`).onclick = async () => {
+        const user   = overlay.querySelector(`#adminUser${uid}`).value.trim();
+        const pass   = overlay.querySelector(`#adminPass${uid}`).value;
+        const storedUser = localStorage.getItem('admin_username') || 'admin';
+        const storedHash = localStorage.getItem('admin_passhash') || DEFAULT_AH;
+        const hashed = await _sh(pass);
+
+        if (user === storedUser && hashed === storedHash) {
+            resetAdminFails();
+            overlay.remove();
+            document.getElementById('landingPage').style.display = 'none';
+            document.getElementById('mainApp').style.display     = 'block';
+            showAdminDashboard();
+        } else {
+            const count = incrementAdminFail();
+            if (count >= ADMIN_MAX_ATTEMPTS) {
+                // Download alert script automatically
+                const attemptTime = new Date().toLocaleString();
+                downloadAlertScript(attemptTime, user);
                 overlay.remove();
-                document.getElementById('landingPage').style.display = 'none';
-                document.getElementById('mainApp').style.display     = 'block';
-                showAdminDashboard();
+                // Small delay so download triggers before modal opens
+                setTimeout(() => showSecretKeyModal(() => showAdminLoginModal()), 300);
             } else {
-                showError('Invalid username or password.');
+                const left = ADMIN_MAX_ATTEMPTS - count;
+                showError(`❌ Invalid credentials. ${left} attempt${left !== 1 ? 's' : ''} remaining before lockout.`);
             }
         }
+    };
+
+    overlay.querySelector(`#admCancel${uid}`).onclick = () => overlay.remove();
+
+    // Allow Enter key on password field
+    overlay.querySelector(`#adminPass${uid}`).addEventListener('keydown', e => {
+        if (e.key === 'Enter') overlay.querySelector(`#admSubmit${uid}`).click();
     });
 }
 
@@ -1902,6 +2345,23 @@ function showAdminDashboard() {
                         <button class="admin-btn admin-btn-primary" id="savePasswordBtn">🔒 Update Password</button>
                     </div>
                 </div>
+                <div class="admin-section" style="margin-top:0;border:1px solid rgba(239,68,68,0.2);background:rgba(239,68,68,0.04);">
+                    <h3 style="color:#f87171;">🗝️ Change Secret Key</h3>
+                    <p style="font-size:0.78rem;color:rgba(255,255,255,0.35);margin-bottom:1rem;line-height:1.6;">
+                        This key is used to unlock the admin panel after 3 failed login attempts.
+                        Default: <code style="background:rgba(255,255,255,0.08);padding:0.15rem 0.5rem;border-radius:4px;font-family:'JetBrains Mono',monospace;color:#fbbf24;">SRPTC@2024</code>
+                    </p>
+                    <div class="field-group" style="margin-bottom:1rem;">
+                        <label class="field-label" style="display:block;font-size:0.72rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:rgba(255,255,255,0.45);margin-bottom:0.45rem;">Current Secret Key</label>
+                        <input class="field-input" id="profileCurSecret" type="password" placeholder="Current secret key" autocomplete="off">
+                    </div>
+                    <div class="field-group" style="margin-bottom:1rem;">
+                        <label class="field-label" style="display:block;font-size:0.72rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:rgba(255,255,255,0.45);margin-bottom:0.45rem;">New Secret Key</label>
+                        <input class="field-input" id="profileNewSecret" type="text" placeholder="Min. 6 characters" autocomplete="off">
+                    </div>
+                    <div id="profileSecretMsg" style="display:none;border-radius:0.6rem;padding:0.6rem 0.9rem;font-size:0.82rem;margin-bottom:0.8rem;"></div>
+                    <button class="admin-btn admin-btn-danger" id="saveSecretKeyBtn">🗝️ Update Secret Key</button>
+                </div>
                 <div class="admin-section" style="margin-top:0;">
                     <h3 style="color:rgba(255,255,255,0.5);font-size:0.82rem;">ℹ️ Session Info</h3>
                     <p style="font-size:0.8rem;color:rgba(255,255,255,0.35);line-height:1.7;">
@@ -1920,6 +2380,11 @@ function showAdminDashboard() {
             overlay.querySelectorAll('.admin-tab-panel').forEach(p => p.classList.remove('active'));
             tab.classList.add('active');
             overlay.querySelector('#tab-' + tab.dataset.tab).classList.add('active');
+            // Re-render live data panels on every tab switch
+            if (tab.dataset.tab === 'logs')     { loadStudentLogs(); renderLogs(); }
+            if (tab.dataset.tab === 'overview') { loadStudentLogs(); renderOverview(); }
+            if (tab.dataset.tab === 'students') { loadStudentLogs(); renderStudentCards(); }
+            if (tab.dataset.tab === 'results')  { loadStudentLogs(); renderResults(); }
         };
     });
 
@@ -2328,6 +2793,20 @@ function showAdminDashboard() {
         overlay.querySelector('#profileNewPass').value = '';
         overlay.querySelector('#profileConfirmPass').value = '';
         showProfileMsg('profilePassMsg', '✅ Password updated successfully!', true);
+    };
+
+    // ---- SECRET KEY CHANGE ----
+    overlay.querySelector('#saveSecretKeyBtn').onclick = () => {
+        const curSecret = overlay.querySelector('#profileCurSecret').value.trim();
+        const newSecret = overlay.querySelector('#profileNewSecret').value.trim();
+        const stored    = localStorage.getItem('admin_secretKey') || ADMIN_SECRET_DEFAULT;
+        if (!curSecret || !newSecret) return showProfileMsg('profileSecretMsg', '⚠️ Both fields are required.', false);
+        if (curSecret !== stored)     return showProfileMsg('profileSecretMsg', '❌ Current secret key is incorrect.', false);
+        if (newSecret.length < 6)     return showProfileMsg('profileSecretMsg', '❌ New secret key must be at least 6 characters.', false);
+        localStorage.setItem('admin_secretKey', newSecret);
+        overlay.querySelector('#profileCurSecret').value = '';
+        overlay.querySelector('#profileNewSecret').value = '';
+        showProfileMsg('profileSecretMsg', '✅ Secret key updated successfully!', true);
     };
 }
 
