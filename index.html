@@ -1792,13 +1792,17 @@ function showStudentModal(prefill = {}) {
             if (!name) return showError('Please enter your full name.');
             if (!reg)  return showError('Please enter your register number.');
 
-            if (prefill.name) addStudentLog(currentStudentName, currentStudentRegNo, 'logout');
+            if (prefill.name) {
+                // Student is updating their name — log the change, not a logout+login
+                addStudentLog(name, reg, 'updated');
+            } else {
+                addStudentLog(name, reg, 'login');
+            }
 
             currentStudentName  = name;
             currentStudentRegNo = reg;
             localStorage.setItem('studentName',  name);
             localStorage.setItem('studentRegNo', reg);
-            addStudentLog(name, reg, prefill.name ? 'updated' : 'login');
 
             updateStudentDisplay();
             document.getElementById('landingPage').style.display = 'none';
@@ -2277,7 +2281,7 @@ function showAdminDashboard() {
                 </div>
                 <div class="logs-wrap">
                     <table>
-                        <thead><tr><th>#</th><th>Name</th><th>Register No</th><th>Action</th><th>Timestamp</th></tr></thead>
+                        <thead><tr><th>#</th><th>Name</th><th>Register No</th><th>Action</th><th>Timestamp</th><th>Session Duration</th></tr></thead>
                         <tbody id="logsTableBody"></tbody>
                     </table>
                 </div>
@@ -2399,12 +2403,13 @@ function showAdminDashboard() {
             <div class="stat-card"><div class="stat-icon">📝</div><div class="stat-val">${studentLogs.length}</div><div class="stat-lbl">Total Entries</div></div>
         `;
         const tbody = overlay.querySelector('#recentLogsBody');
+        const actionLabel = { login: '🟢 Entry', logout: '🔴 Exit', updated: '✏️ Updated' };
         tbody.innerHTML = studentLogs.slice(0, 10).map((log, i) => `
             <tr>
                 <td>${i+1}</td>
                 <td><strong style="color:white;">${escapeHtml(log.name)}</strong></td>
                 <td style="font-family:'JetBrains Mono',monospace;font-size:0.78rem;">${escapeHtml(log.regNo)}</td>
-                <td><span class="action-badge ${log.action}">${log.action}</span></td>
+                <td><span class="action-badge ${log.action}">${actionLabel[log.action] || log.action}</span></td>
                 <td style="font-size:0.75rem;color:rgba(255,255,255,0.4);">${log.timestamp}</td>
             </tr>
         `).join('') || '<tr><td colspan="5" style="text-align:center;color:rgba(255,255,255,0.25);padding:2rem;">No activity yet</td></tr>';
@@ -2595,15 +2600,45 @@ function showAdminDashboard() {
     function renderLogs() {
         const tbody = overlay.querySelector('#logsTableBody');
         if (!tbody) return;
-        tbody.innerHTML = studentLogs.map((log, i) => `
+
+        // Build enriched log rows — pair login/logout to compute session duration
+        // Logs are stored newest-first (unshift). We work oldest-first for pairing.
+        const ordered  = [...studentLogs].reverse(); // oldest first
+        const sessions = {}; // key: regNo → last login timestamp
+
+        const enriched = ordered.map(log => {
+            const key = log.regNo;
+            let duration = '';
+            if (log.action === 'login') {
+                sessions[key] = log.id; // record login time (id = Date.now())
+            } else if (log.action === 'logout' && sessions[key]) {
+                const ms  = log.id - sessions[key];
+                const min = Math.floor(ms / 60000);
+                const sec = Math.floor((ms % 60000) / 1000);
+                duration  = min > 0 ? `${min}m ${sec}s` : `${sec}s`;
+                delete sessions[key];
+            }
+            return { ...log, duration };
+        }).reverse(); // back to newest-first for display
+
+        const actionLabel = { login: '🟢 Entry', logout: '🔴 Exit', updated: '✏️ Updated' };
+
+        tbody.innerHTML = enriched.map((log, i) => `
             <tr>
-                <td>${i+1}</td>
+                <td>${i + 1}</td>
                 <td><strong style="color:white;">${escapeHtml(log.name)}</strong></td>
                 <td style="font-family:'JetBrains Mono',monospace;font-size:0.78rem;">${escapeHtml(log.regNo)}</td>
-                <td><span class="action-badge ${log.action}">${log.action}</span></td>
+                <td>
+                    <span class="action-badge ${log.action}">
+                        ${actionLabel[log.action] || log.action}
+                    </span>
+                </td>
                 <td style="font-size:0.75rem;color:rgba(255,255,255,0.4);">${log.timestamp}</td>
+                <td style="font-size:0.72rem;color:rgba(255,255,255,0.35);font-family:'JetBrains Mono',monospace;">
+                    ${log.duration || '—'}
+                </td>
             </tr>
-        `).join('') || '<tr><td colspan="5" style="text-align:center;color:rgba(255,255,255,0.25);padding:2rem;">No entries yet</td></tr>';
+        `).join('') || '<tr><td colspan="6" style="text-align:center;color:rgba(255,255,255,0.25);padding:2rem;">No entries yet</td></tr>';
     }
 
     function renderGradeEditor() {
@@ -4184,6 +4219,10 @@ function init() {
     if (savedName && savedReg) {
         currentStudentName  = savedName;
         currentStudentRegNo = savedReg;
+
+        // Log a session-restore login so the admin can see the student came back
+        addStudentLog(savedName, savedReg, 'login');
+
         updateStudentDisplay();
         document.getElementById('landingPage').style.display = 'none';
         document.getElementById('mainApp').style.display     = 'block';
@@ -4887,88 +4926,59 @@ function runTour() {
 }
 
 // ============================================================
-// AUTO-LOGOUT ON TAB CLOSE / WINDOW CLOSE
-// Saves draft and clears session so the next visit goes to login
+// SESSION PERSISTENCE & TAB-CLOSE LOGOUT
+//
+// Design:
+//   • localStorage keeps the session across refreshes (studentName / studentRegNo).
+//   • sessionStorage flag 'sessionAlive' is set on every page load and is
+//     automatically cleared by the browser when the TAB is truly closed.
+//   • On beforeunload we set a flag 'isReloading' in sessionStorage so that
+//     pagehide can distinguish a refresh (reloading=true, flag survives) from
+//     a real tab close (flag won't survive because the tab dies).
+//   • Only on a real tab-close do we log 'logout' and clear the session.
+//   • visibilitychange is used only for silent draft auto-save — it never
+//     triggers a logout or modifies session keys.
 // ============================================================
 (function() {
-    /**
-     * Core auto-logout: save draft, clear session keys, redirect to
-     * the landing page (or, if the page is being unloaded, just clear
-     * localStorage so the next fresh load shows the login screen).
-     */
-    function autoLogout(isUnload) {
-        // Only act if a student is currently logged in
-        if (!currentStudentName && !currentStudentRegNo) return;
 
-        // Save the latest draft so nothing is lost
-        saveDraft({});
+    // Mark that the session is alive in this tab
+    sessionStorage.setItem('sessionAlive', '1');
 
-        // Log the auto-logout event in admin activity log
-        try {
-            addStudentLog(currentStudentName, currentStudentRegNo, 'logout');
-        } catch(e) {}
-
-        // Clear the session (keep draft key intact — restored on next login)
-        localStorage.removeItem('studentName');
-        localStorage.removeItem('studentRegNo');
-
-        if (isUnload) {
-            // During unload we cannot navigate — the session keys are already
-            // cleared so the next page load will show the login screen.
-            return;
-        }
-
-        // If the page is still open (visibilitychange hidden), reset the UI
-        currentStudentName  = '';
-        currentStudentRegNo = '';
-
-        for (let i = 1; i <= 6; i++) {
-            const inp = document.getElementById(`sem${i}Gpa`);
-            const st  = document.getElementById(`sem${i}Status`);
-            if (inp) inp.value = '';
-            if (st)  st.textContent = '-';
-        }
-        try {
-            document.getElementById('finalCgpa').textContent           = '—';
-            document.getElementById('classificationResult').textContent = '';
-            document.getElementById('gradeSummary').textContent         = '';
-            document.getElementById('gpaValue').textContent             = '—';
-            document.getElementById('totalCredits').textContent         = '0';
-            updateStudentDisplay();
-        } catch(e) {}
-
-        // Show landing / login page
-        const landing = document.getElementById('landingPage');
-        const main    = document.getElementById('mainApp');
-        if (main)    main.style.display    = 'none';
-        if (landing) landing.style.display = 'flex';
-    }
-
-    // ── beforeunload: fires when the tab or browser window is closed,
-    //    or when the user navigates away.  We only clear localStorage here
-    //    (no UI changes possible during unload).
+    // ── beforeunload fires on BOTH refresh and real close.
+    //    We set a short-lived 'reloading' flag so pagehide can tell the difference.
     window.addEventListener('beforeunload', function() {
-        autoLogout(true);
+        sessionStorage.setItem('reloading', '1');
+        // Always auto-save the draft so nothing is lost
+        try { saveDraft({}); } catch(e) {}
     });
 
-    // ── pagehide: a more reliable companion to beforeunload on mobile
-    //    browsers (iOS Safari) where beforeunload may not fire.
+    // ── pagehide is reliable on mobile (iOS Safari) and desktop.
+    //    If 'reloading' is still set in sessionStorage it means this is a
+    //    refresh/navigate-away — do NOT log a logout.
+    //    If 'reloading' is NOT set it means the tab was truly closed — log logout
+    //    and clear session so the next fresh open shows the login screen.
     window.addEventListener('pagehide', function(e) {
-        // e.persisted === true means the page went into the bfcache (back/forward);
-        // we still want to logout in that case so the cached page doesn't show
-        // a logged-in state if the user returns to it.
-        autoLogout(true);
+        const isReloading = sessionStorage.getItem('reloading') === '1';
+
+        if (!isReloading) {
+            // TRUE TAB CLOSE — clear session and log the exit
+            if (currentStudentName || currentStudentRegNo) {
+                try { addStudentLog(currentStudentName, currentStudentRegNo, 'logout'); } catch(ex) {}
+                localStorage.removeItem('studentName');
+                localStorage.removeItem('studentRegNo');
+            }
+        }
+        // Clear the reload flag regardless (it will be re-set on next beforeunload)
+        sessionStorage.removeItem('reloading');
     });
 
-    // ── visibilitychange: fires when the tab is hidden (e.g. the user
-    //    switches tabs or minimises the browser).  On mobile this is also
-    //    the primary signal that the app has been "closed" by the OS.
+    // ── visibilitychange: auto-save draft only — never logout
     document.addEventListener('visibilitychange', function() {
         if (document.visibilityState === 'hidden') {
-            // Save draft silently on hide (acts as an extra auto-save)
             try { saveDraft({}); } catch(e) {}
         }
     });
+
 })();
 </script>
 </body>
