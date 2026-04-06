@@ -8,6 +8,8 @@
     <link rel="apple-touch-icon" href="srptc.png">
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- sql.js: SQLite compiled to WebAssembly — runs fully in-browser, nothing to install -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/sql-wasm.js"></script>
     <style>
         :root {
             --navy: #0b1f3a;
@@ -1130,7 +1132,38 @@
                 print-color-adjust: exact !important;
             }
         }
-    </style>
+    
+        /* ===== SQL EDITOR — Logs tab ===== */
+        .sql-editor-wrap{background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.1);border-radius:1rem;padding:1rem 1.1rem;margin-bottom:1rem}
+        .sql-editor-label{font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.35);margin-bottom:.4rem;display:flex;align-items:center;gap:.5rem}
+        .sql-badge{background:rgba(245,158,11,.2);color:#fbbf24;border:1px solid rgba(245,158,11,.35);border-radius:4px;padding:.05rem .4rem;font-size:.62rem;letter-spacing:.06em}
+        #sqlInput{width:100%;min-height:80px;max-height:200px;background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.12);border-radius:.6rem;color:#e2e8f0;font-family:'JetBrains Mono',monospace;font-size:.82rem;line-height:1.6;padding:.65rem .9rem;outline:none;resize:vertical;transition:border-color .2s}
+        #sqlInput:focus{border-color:rgba(245,158,11,.5)}
+        #sqlInput::placeholder{color:rgba(255,255,255,.2)}
+        .sql-btn-row{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin-top:.6rem}
+        .sql-run-btn{background:linear-gradient(135deg,#1a4a8a,#2563eb);color:white;border:none;border-radius:100px;padding:.45rem 1.2rem;font-family:'Sora',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;transition:all .18s}
+        .sql-run-btn:hover{transform:translateY(-2px);opacity:.9}
+        .sql-preset-btn{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.6);border-radius:100px;padding:.35rem .9rem;font-family:'JetBrains Mono',monospace;font-size:.7rem;cursor:pointer;transition:all .15s;white-space:nowrap}
+        .sql-preset-btn:hover{background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.35);color:#fbbf24}
+        #sqlResult{margin-top:.8rem;font-size:.78rem;color:rgba(255,255,255,.55);font-family:'JetBrains Mono',monospace;min-height:1.2rem}
+        #sqlResult.sql-error{color:#f87171}
+        #sqlResult.sql-ok{color:#34d399}
+        .sql-result-table-wrap{overflow-x:auto;margin-top:.6rem;border-radius:.6rem;border:1px solid rgba(255,255,255,.08);max-height:280px;overflow-y:auto}
+        .sql-result-table{width:100%;border-collapse:collapse;font-size:.78rem}
+        .sql-result-table th{background:rgba(26,74,138,.6);color:rgba(255,255,255,.7);font-size:.68rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:.55rem .75rem;text-align:left;position:sticky;top:0}
+        .sql-result-table td{padding:.5rem .75rem;color:rgba(255,255,255,.8);border-bottom:1px solid rgba(255,255,255,.04);font-family:'JetBrains Mono',monospace}
+        .sql-result-table tr:last-child td{border-bottom:none}
+        .sql-result-table tr:hover td{background:rgba(255,255,255,.03)}
+        .sql-schema-hint{margin-top:.5rem;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.07);border-radius:.5rem;padding:.6rem .9rem;font-family:'JetBrains Mono',monospace;font-size:.7rem;color:rgba(255,255,255,.35);line-height:1.7}
+        .sql-schema-hint strong{color:rgba(245,158,11,.8)}
+        .log-edit-btn{background:rgba(26,74,138,.3);border:1px solid rgba(26,74,138,.5);color:#93c5fd;padding:.2rem .6rem;border-radius:100px;font-size:.68rem;font-weight:600;cursor:pointer;margin-left:.3rem;font-family:'Sora',sans-serif;transition:all .15s}
+        .log-edit-btn:hover{background:rgba(26,74,138,.6)}
+        .log-del-btn{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:#f87171;padding:.2rem .6rem;border-radius:100px;font-size:.68rem;font-weight:600;cursor:pointer;margin-left:.2rem;font-family:'Sora',sans-serif;transition:all .15s}
+        .log-del-btn:hover{background:rgba(239,68,68,.35)}
+        .logs-view-btn{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.5);border-radius:100px;padding:.35rem 1rem;font-family:'Sora',sans-serif;font-size:.75rem;font-weight:600;cursor:pointer;transition:all .15s}
+        .logs-view-btn.active{background:rgba(245,158,11,.15);border-color:rgba(245,158,11,.4);color:#fbbf24}
+
+        </style>
 </head>
 <body>
 
@@ -1687,18 +1720,147 @@ function restoreDraftGPAs() {
 }
 
 // ============================================================
-// LOGS
+// SQL-POWERED LOGS  (sql.js — SQLite compiled to WebAssembly)
+// Schema: logs(id,name,regNo,action,timestamp,date)
+//   id        = Date.now() — unique integer primary key
+//   action    = 'login' | 'logout' | 'updated'
+//   timestamp = human-readable locale string
+//   date      = ISO 8601 string
 // ============================================================
-function loadStudentLogs() {
-    const s = localStorage.getItem('studentEntryLogs');
-    if (s) studentLogs = JSON.parse(s);
+let _sqlDb     = null;
+let _sqlReady  = false;
+const SQL_STORE_KEY = 'srptc_sqlLogsDb_v1';
+
+// Load / create the SQLite database
+function _initSqlDbSync(SQL) {
+    const saved = localStorage.getItem(SQL_STORE_KEY);
+    if (saved) {
+        try {
+            const bytes = Uint8Array.from(atob(saved), function(c){ return c.charCodeAt(0); });
+            _sqlDb = new SQL.Database(bytes);
+        } catch(e) { _sqlDb = new SQL.Database(); }
+    } else {
+        _sqlDb = new SQL.Database();
+    }
+    _sqlDb.run([
+        "CREATE TABLE IF NOT EXISTS logs(",
+        "  id        INTEGER PRIMARY KEY,",
+        "  name      TEXT NOT NULL,",
+        "  regNo     TEXT NOT NULL,",
+        "  action    TEXT NOT NULL DEFAULT 'login',",
+        "  timestamp TEXT NOT NULL,",
+        "  date      TEXT NOT NULL",
+        ");"
+    ].join(" "));
+
+    // One-time migration of existing JSON logs
+    if (!localStorage.getItem('srptc_sqlMigrated')) {
+        var raw = localStorage.getItem('studentEntryLogs');
+        if (raw) {
+            try {
+                var arr = JSON.parse(raw);
+                var stmt = _sqlDb.prepare(
+                    "INSERT OR IGNORE INTO logs(id,name,regNo,action,timestamp,date) VALUES(?,?,?,?,?,?)"
+                );
+                arr.forEach(function(l) {
+                    stmt.run([l.id, l.name, l.regNo, l.action || 'login', l.timestamp, l.date]);
+                });
+                stmt.free();
+            } catch(e) {}
+        }
+        localStorage.setItem('srptc_sqlMigrated', '1');
+    }
+
+    _sqlReady = true;
+    _dbPersist();
+    _dbSyncArray();
 }
+
+async function _ensureSqlReady() {
+    if (_sqlReady) return true;
+    try {
+        var SQL = await initSqlJs({
+            locateFile: function(f) {
+                return 'https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/' + f;
+            }
+        });
+        _initSqlDbSync(SQL);
+        return true;
+    } catch(e) {
+        console.error('sql.js failed:', e);
+        return false;
+    }
+}
+
+function _dbPersist() {
+    if (!_sqlDb) return;
+    try {
+        var data = _sqlDb.export();
+        var b64  = btoa(String.fromCharCode.apply(null, data));
+        localStorage.setItem(SQL_STORE_KEY, b64);
+    } catch(e) {}
+}
+
+function _dbSyncArray() {
+    if (!_sqlDb) return;
+    try {
+        var res = _sqlDb.exec("SELECT id,name,regNo,action,timestamp,date FROM logs ORDER BY id DESC LIMIT 500");
+        studentLogs = (res.length && res[0].values)
+            ? res[0].values.map(function(r){ return {id:r[0],name:r[1],regNo:r[2],action:r[3],timestamp:r[4],date:r[5]}; })
+            : [];
+        localStorage.setItem('studentEntryLogs', JSON.stringify(studentLogs));
+    } catch(e) {}
+}
+
+// Public: run arbitrary SQL — returns {columns,rows} or {error,affected}
+function runSql(sql) {
+    if (!_sqlReady || !_sqlDb) return { error: 'SQLite not ready yet — please wait a moment.' };
+    try {
+        var res = _sqlDb.exec(sql);
+        _dbPersist();
+        _dbSyncArray();
+        if (!res.length) return { columns: [], rows: [], affected: _sqlDb.getRowsModified() };
+        return { columns: res[0].columns, rows: res[0].values, affected: res[0].values.length };
+    } catch(e) {
+        return { error: e.message };
+    }
+}
+
+function loadStudentLogs() {
+    var s = localStorage.getItem('studentEntryLogs');
+    if (s) { try { studentLogs = JSON.parse(s); } catch(e) { studentLogs = []; } }
+    _ensureSqlReady().then(function(ok){ if (ok) _dbSyncArray(); });
+}
+
 function saveStudentLogs() {
     localStorage.setItem('studentEntryLogs', JSON.stringify(studentLogs));
+    _dbPersist();
 }
-function addStudentLog(name, regNo, action = "login") {
-    studentLogs.unshift({ id: Date.now(), name, regNo, action, timestamp: new Date().toLocaleString(), date: new Date().toISOString() });
-    if (studentLogs.length > 200) studentLogs = studentLogs.slice(0, 200);
+
+function addStudentLog(name, regNo, action) {
+    if (action === undefined) action = 'login';
+    var entry = {
+        id:        Date.now(),
+        name:      name,
+        regNo:     regNo,
+        action:    action,
+        timestamp: new Date().toLocaleString('en-IN'),
+        date:      new Date().toISOString()
+    };
+    if (_sqlReady && _sqlDb) {
+        try {
+            _sqlDb.run(
+                "INSERT OR IGNORE INTO logs(id,name,regNo,action,timestamp,date) VALUES(?,?,?,?,?,?)",
+                [entry.id, entry.name, entry.regNo, entry.action, entry.timestamp, entry.date]
+            );
+            _dbPersist();
+            _dbSyncArray();
+            return;
+        } catch(e) {}
+    }
+    // Fallback — JS array only
+    studentLogs.unshift(entry);
+    if (studentLogs.length > 500) studentLogs = studentLogs.slice(0, 500);
     saveStudentLogs();
 }
 
@@ -1792,17 +1954,13 @@ function showStudentModal(prefill = {}) {
             if (!name) return showError('Please enter your full name.');
             if (!reg)  return showError('Please enter your register number.');
 
-            if (prefill.name) {
-                // Student is updating their name — log the change, not a logout+login
-                addStudentLog(name, reg, 'updated');
-            } else {
-                addStudentLog(name, reg, 'login');
-            }
+            if (prefill.name) addStudentLog(currentStudentName, currentStudentRegNo, 'logout');
 
             currentStudentName  = name;
             currentStudentRegNo = reg;
             localStorage.setItem('studentName',  name);
             localStorage.setItem('studentRegNo', reg);
+            addStudentLog(name, reg, prefill.name ? 'updated' : 'login');
 
             updateStudentDisplay();
             document.getElementById('landingPage').style.display = 'none';
@@ -2275,15 +2433,61 @@ function showAdminDashboard() {
                 </div>
             </div>
             <div class="admin-tab-panel" id="tab-logs">
-                <div class="section-hdr">
-                    <h3>📋 All Entry Logs</h3>
-                    <button class="small-danger-btn" id="clearLogsBtn">🗑️ Clear All Logs</button>
+                <div class="section-hdr" style="flex-wrap:wrap;gap:.6rem;">
+                    <h3>📋 Entry &amp; Exit Logs</h3>
+                    <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;">
+                        <button class="logs-view-btn active" id="logsViewTableBtn">📊 Table View</button>
+                        <button class="logs-view-btn" id="logsViewSqlBtn">🖥️ SQL Editor</button>
+                        <button class="small-danger-btn" id="clearLogsBtn">🗑️ Clear All Logs</button>
+                    </div>
                 </div>
-                <div class="logs-wrap">
-                    <table>
-                        <thead><tr><th>#</th><th>Name</th><th>Register No</th><th>Action</th><th>Timestamp</th><th>Session Duration</th></tr></thead>
-                        <tbody id="logsTableBody"></tbody>
-                    </table>
+
+                <!-- TABLE VIEW -->
+                <div id="logsTableView">
+                    <div class="logs-wrap">
+                        <table>
+                            <thead><tr>
+                                <th>#</th><th>Name</th><th>Register No</th>
+                                <th>Action</th><th>Timestamp</th><th>Duration</th>
+                                <th style="text-align:center;">Edit</th>
+                            </tr></thead>
+                            <tbody id="logsTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- SQL EDITOR VIEW -->
+                <div id="logsSqlView" style="display:none;">
+                    <div class="sql-editor-wrap">
+                        <div class="sql-editor-label">
+                            <span>SQL Query</span>
+                            <span class="sql-badge">SQLite in-browser</span>
+                        </div>
+                        <textarea id="sqlInput" spellcheck="false"
+                            placeholder="SELECT * FROM logs ORDER BY id DESC LIMIT 20;"></textarea>
+                        <div class="sql-btn-row">
+                            <button class="sql-run-btn" id="sqlRunBtn">&#x25B6; Run &nbsp;<small style="opacity:.6;font-weight:400;">Ctrl+Enter</small></button>
+                            <button class="sql-preset-btn" data-q="SELECT * FROM logs ORDER BY id DESC;">All Logs</button>
+                            <button class="sql-preset-btn" data-q="SELECT * FROM logs WHERE action='login' ORDER BY id DESC;">Entries</button>
+                            <button class="sql-preset-btn" data-q="SELECT * FROM logs WHERE action='logout' ORDER BY id DESC;">Exits</button>
+                            <button class="sql-preset-btn" data-q="SELECT regNo,name,COUNT(*) logins FROM logs WHERE action='login' GROUP BY regNo ORDER BY logins DESC;">Visit Count</button>
+                            <button class="sql-preset-btn" data-q="SELECT * FROM logs WHERE date(date)=date('now','localtime') ORDER BY id DESC;">Today</button>
+                            <button class="sql-preset-btn" data-q="SELECT regNo,name,MAX(timestamp) last_seen FROM logs GROUP BY regNo ORDER BY last_seen DESC;">Last Seen</button>
+                            <button class="sql-preset-btn" data-q="DELETE FROM logs WHERE id=0;">Delete by ID</button>
+                            <button class="sql-preset-btn" data-q="UPDATE logs SET name='New Name' WHERE id=0;">Edit Name</button>
+                            <button class="sql-preset-btn" data-q="UPDATE logs SET action='login' WHERE id=0;">Fix Action</button>
+                            <button class="sql-preset-btn" data-q="DELETE FROM logs WHERE action='logout' AND name='';"> Clear Orphan Exits</button>
+                        </div>
+                        <div class="sql-schema-hint">
+                            <strong>Table:</strong> logs &nbsp;|&nbsp;
+                            <strong>Columns:</strong>
+                            id INTEGER &nbsp;&#xB7;&nbsp; name TEXT &nbsp;&#xB7;&nbsp;
+                            regNo TEXT &nbsp;&#xB7;&nbsp; action TEXT (login/logout/updated) &nbsp;&#xB7;&nbsp;
+                            timestamp TEXT &nbsp;&#xB7;&nbsp; date TEXT (ISO)
+                        </div>
+                        <div id="sqlResult"></div>
+                        <div id="sqlResultTableWrap"></div>
+                    </div>
                 </div>
             </div>
             <div class="admin-tab-panel" id="tab-grades">
@@ -2385,10 +2589,10 @@ function showAdminDashboard() {
             tab.classList.add('active');
             overlay.querySelector('#tab-' + tab.dataset.tab).classList.add('active');
             // Re-render live data panels on every tab switch
-            if (tab.dataset.tab === 'logs')     { loadStudentLogs(); renderLogs(); }
-            if (tab.dataset.tab === 'overview') { loadStudentLogs(); renderOverview(); }
-            if (tab.dataset.tab === 'students') { loadStudentLogs(); renderStudentCards(); }
-            if (tab.dataset.tab === 'results')  { loadStudentLogs(); renderResults(); }
+            if (tab.dataset.tab === 'logs')     { _dbSyncArray(); renderLogs(); initSqlViewToggle(); }
+            if (tab.dataset.tab === 'overview') { _dbSyncArray(); renderOverview(); }
+            if (tab.dataset.tab === 'students') { _dbSyncArray(); renderStudentCards(); }
+            if (tab.dataset.tab === 'results')  { _dbSyncArray(); renderResults(); }
         };
     });
 
@@ -2403,13 +2607,12 @@ function showAdminDashboard() {
             <div class="stat-card"><div class="stat-icon">📝</div><div class="stat-val">${studentLogs.length}</div><div class="stat-lbl">Total Entries</div></div>
         `;
         const tbody = overlay.querySelector('#recentLogsBody');
-        const actionLabel = { login: '🟢 Entry', logout: '🔴 Exit', updated: '✏️ Updated' };
         tbody.innerHTML = studentLogs.slice(0, 10).map((log, i) => `
             <tr>
                 <td>${i+1}</td>
                 <td><strong style="color:white;">${escapeHtml(log.name)}</strong></td>
                 <td style="font-family:'JetBrains Mono',monospace;font-size:0.78rem;">${escapeHtml(log.regNo)}</td>
-                <td><span class="action-badge ${log.action}">${actionLabel[log.action] || log.action}</span></td>
+                <td><span class="action-badge ${log.action}">${log.action}</span></td>
                 <td style="font-size:0.75rem;color:rgba(255,255,255,0.4);">${log.timestamp}</td>
             </tr>
         `).join('') || '<tr><td colspan="5" style="text-align:center;color:rgba(255,255,255,0.25);padding:2rem;">No activity yet</td></tr>';
@@ -2597,48 +2800,201 @@ function showAdminDashboard() {
         });
     }
 
-    function renderLogs() {
-        const tbody = overlay.querySelector('#logsTableBody');
-        if (!tbody) return;
+    var ACTION_LABEL = { login: '&#x1F7E2; Entry', logout: '&#x1F534; Exit', updated: '&#x270F;&#xFE0F; Updated' };
 
-        // Build enriched log rows — pair login/logout to compute session duration
-        // Logs are stored newest-first (unshift). We work oldest-first for pairing.
-        const ordered  = [...studentLogs].reverse(); // oldest first
-        const sessions = {}; // key: regNo → last login timestamp
-
-        const enriched = ordered.map(log => {
-            const key = log.regNo;
-            let duration = '';
+    function computeDurations(logs) {
+        var durMap = {}, sessions = {};
+        var rev = logs.slice().reverse();
+        rev.forEach(function(log) {
             if (log.action === 'login') {
-                sessions[key] = log.id; // record login time (id = Date.now())
-            } else if (log.action === 'logout' && sessions[key]) {
-                const ms  = log.id - sessions[key];
-                const min = Math.floor(ms / 60000);
-                const sec = Math.floor((ms % 60000) / 1000);
-                duration  = min > 0 ? `${min}m ${sec}s` : `${sec}s`;
-                delete sessions[key];
+                sessions[log.regNo] = log.id;
+            } else if (log.action === 'logout' && sessions[log.regNo]) {
+                var ms  = log.id - sessions[log.regNo];
+                var min = Math.floor(ms / 60000);
+                var sec = Math.floor((ms % 60000) / 1000);
+                durMap[log.id] = min > 0 ? (min + 'm ' + sec + 's') : (sec + 's');
+                delete sessions[log.regNo];
             }
-            return { ...log, duration };
-        }).reverse(); // back to newest-first for display
+        });
+        return durMap;
+    }
 
-        const actionLabel = { login: '🟢 Entry', logout: '🔴 Exit', updated: '✏️ Updated' };
+    function renderLogs() {
+        var tbody = overlay.querySelector('#logsTableBody');
+        if (!tbody) return;
+        var logs   = studentLogs;
+        var durMap = computeDurations(logs);
 
-        tbody.innerHTML = enriched.map((log, i) => `
-            <tr>
-                <td>${i + 1}</td>
-                <td><strong style="color:white;">${escapeHtml(log.name)}</strong></td>
-                <td style="font-family:'JetBrains Mono',monospace;font-size:0.78rem;">${escapeHtml(log.regNo)}</td>
-                <td>
-                    <span class="action-badge ${log.action}">
-                        ${actionLabel[log.action] || log.action}
-                    </span>
-                </td>
-                <td style="font-size:0.75rem;color:rgba(255,255,255,0.4);">${log.timestamp}</td>
-                <td style="font-size:0.72rem;color:rgba(255,255,255,0.35);font-family:'JetBrains Mono',monospace;">
-                    ${log.duration || '—'}
-                </td>
-            </tr>
-        `).join('') || '<tr><td colspan="6" style="text-align:center;color:rgba(255,255,255,0.25);padding:2rem;">No entries yet</td></tr>';
+        if (!logs.length) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:rgba(255,255,255,0.25);padding:2rem;">No entries yet</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = logs.map(function(log, i) {
+            var label    = ACTION_LABEL[log.action] || log.action;
+            var dur      = durMap[log.id] || '&mdash;';
+            var nameH    = escapeHtml(log.name);
+            var regH     = escapeHtml(log.regNo);
+            var tsH      = escapeHtml(log.timestamp);
+            var actionH  = escapeHtml(log.action);
+            return '<tr data-lid="' + log.id + '">'
+                + '<td style="color:rgba(255,255,255,0.35);font-size:.72rem;">' + (i+1) + '</td>'
+                + '<td><strong style="color:white;">' + nameH + '</strong></td>'
+                + '<td style="font-family:\'JetBrains Mono\',monospace;font-size:.78rem;">' + regH + '</td>'
+                + '<td><span class="action-badge ' + actionH + '">' + label + '</span></td>'
+                + '<td style="font-size:.74rem;color:rgba(255,255,255,0.4);">' + tsH + '</td>'
+                + '<td style="font-size:.72rem;color:rgba(255,255,255,0.3);font-family:\'JetBrains Mono\',monospace;">' + dur + '</td>'
+                + '<td style="text-align:center;white-space:nowrap;">'
+                +   '<button class="log-edit-btn" data-id="' + log.id + '" '
+                +     'data-name="' + nameH + '" data-regno="' + regH + '" '
+                +     'data-action="' + actionH + '" data-ts="' + tsH + '">&#x270F;&#xFE0F; Edit</button>'
+                +   '<button class="log-del-btn" data-id="' + log.id + '">&#x1F5D1;&#xFE0F;</button>'
+                + '</td>'
+                + '</tr>';
+        }).join('');
+
+        // ── Edit button → inline editable row ──────────────────
+        tbody.querySelectorAll('.log-edit-btn').forEach(function(btn) {
+            btn.onclick = function() {
+                var id     = parseInt(btn.dataset.id);
+                var tr     = btn.closest('tr');
+                var name   = btn.dataset.name;
+                var regNo  = btn.dataset.regno;
+                var action = btn.dataset.action;
+                var ts     = btn.dataset.ts;
+                var rowNum = tr.rowIndex;
+
+                var selOpts = ['login','logout','updated'].map(function(a) {
+                    return '<option value="' + a + '"' + (action===a?' selected':'') + '>'
+                        + (a==='login'?'Entry':a==='logout'?'Exit':'Updated') + '</option>';
+                }).join('');
+
+                tr.innerHTML =
+                    '<td style="color:rgba(255,255,255,0.35);">' + rowNum + '</td>'
+                    + '<td><input class="subject-name-field" id="en_'+id+'" value="'+name+'" style="min-width:120px;"></td>'
+                    + '<td><input class="subject-name-field" id="er_'+id+'" value="'+regNo+'" style="min-width:110px;font-family:\'JetBrains Mono\',monospace;"></td>'
+                    + '<td><select id="ea_'+id+'" style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:.5rem;color:white;padding:.3rem .6rem;font-family:\'Sora\',sans-serif;font-size:.8rem;">'
+                    +   selOpts
+                    + '</select></td>'
+                    + '<td><input class="subject-name-field" id="et_'+id+'" value="'+ts+'" style="min-width:145px;font-size:.75rem;"></td>'
+                    + '<td>&mdash;</td>'
+                    + '<td style="white-space:nowrap;">'
+                    +   '<button class="small-success-btn lsave" data-id="'+id+'" style="padding:.25rem .7rem;font-size:.72rem;">&#x1F4BE; Save</button>'
+                    +   '<button class="small-danger-btn lcancel" style="padding:.25rem .7rem;font-size:.72rem;margin-left:.3rem;">&#x2715;</button>'
+                    + '</td>';
+
+                tr.querySelector('.lsave').onclick = function() {
+                    var nn = document.getElementById('en_'+id).value.trim();
+                    var nr = document.getElementById('er_'+id).value.trim();
+                    var na = document.getElementById('ea_'+id).value;
+                    var nt = document.getElementById('et_'+id).value.trim();
+                    if (!nn || !nr) { alert('Name and Register No cannot be empty.'); return; }
+                    var sql = "UPDATE logs SET name='" + nn.replace(/'/g,"''")
+                            + "', regNo='" + nr.replace(/'/g,"''")
+                            + "', action='" + na
+                            + "', timestamp='" + nt.replace(/'/g,"''")
+                            + "' WHERE id=" + id;
+                    var res = runSql(sql);
+                    if (res.error) { alert('SQL Error: ' + res.error); return; }
+                    renderLogs(); renderOverview();
+                };
+                tr.querySelector('.lcancel').onclick = function() { renderLogs(); };
+            };
+        });
+
+        // ── Delete button ─────────────────────────────────────
+        tbody.querySelectorAll('.log-del-btn').forEach(function(btn) {
+            btn.onclick = function() {
+                var id = parseInt(btn.dataset.id);
+                if (!confirm('Delete this log entry?\nThis cannot be undone.')) return;
+                var res = runSql('DELETE FROM logs WHERE id=' + id);
+                if (res.error) { alert('SQL Error: ' + res.error); return; }
+                renderLogs(); renderOverview();
+            };
+        });
+    }
+
+    // ── SQL editor: execute and display results ──────────────
+    function runSqlAndDisplay() {
+        var resEl  = overlay.querySelector('#sqlResult');
+        var tableW = overlay.querySelector('#sqlResultTableWrap');
+        var input  = overlay.querySelector('#sqlInput');
+        var sql    = input ? input.value.trim() : '';
+        if (!sql) return;
+
+        resEl.className   = '';
+        resEl.textContent = 'Running...';
+        tableW.innerHTML  = '';
+
+        function execute() {
+            var result = runSql(sql);
+            if (result.error) {
+                resEl.className   = 'sql-error';
+                resEl.textContent = 'Error: ' + result.error;
+                return;
+            }
+            if (result.columns && result.columns.length) {
+                resEl.className   = 'sql-ok';
+                resEl.textContent = result.rows.length + ' row' + (result.rows.length !== 1 ? 's' : '') + ' returned';
+                var cols = result.columns.map(function(c){ return '<th>' + escapeHtml(String(c)) + '</th>'; }).join('');
+                var rows = result.rows.map(function(row){
+                    return '<tr>' + row.map(function(cell){
+                        return '<td>' + (cell === null
+                            ? '<span style="color:rgba(255,255,255,0.2);">NULL</span>'
+                            : escapeHtml(String(cell))) + '</td>';
+                    }).join('') + '</tr>';
+                }).join('');
+                tableW.innerHTML =
+                    '<div class="sql-result-table-wrap">'
+                    + '<table class="sql-result-table"><thead><tr>' + cols + '</tr></thead>'
+                    + '<tbody>' + rows + '</tbody></table></div>';
+            } else {
+                var aff = result.affected || 0;
+                resEl.className   = 'sql-ok';
+                resEl.textContent = 'Done — ' + aff + ' row' + (aff !== 1 ? 's' : '') + ' affected';
+                renderLogs(); renderOverview(); renderStudentCards();
+            }
+        }
+
+        if (_sqlReady) { execute(); }
+        else { _ensureSqlReady().then(function(ok){ ok ? execute() : (resEl.className='sql-error', resEl.textContent='SQLite failed to load'); }); }
+    }
+
+    // ── View toggle + preset buttons ────────────────────────
+    function initSqlViewToggle() {
+        var tblBtn  = overlay.querySelector('#logsViewTableBtn');
+        var sqlBtn  = overlay.querySelector('#logsViewSqlBtn');
+        var tblDiv  = overlay.querySelector('#logsTableView');
+        var sqlDiv  = overlay.querySelector('#logsSqlView');
+        var sqlIn   = overlay.querySelector('#sqlInput');
+        var runBtn  = overlay.querySelector('#sqlRunBtn');
+        if (!tblBtn || !sqlBtn) return;
+
+        tblBtn.onclick = function() {
+            tblDiv.style.display = ''; sqlDiv.style.display = 'none';
+            tblBtn.classList.add('active'); sqlBtn.classList.remove('active');
+            renderLogs();
+        };
+        sqlBtn.onclick = function() {
+            tblDiv.style.display = 'none'; sqlDiv.style.display = '';
+            sqlBtn.classList.add('active'); tblBtn.classList.remove('active');
+        };
+        if (runBtn) runBtn.onclick = runSqlAndDisplay;
+        if (sqlIn) {
+            sqlIn.addEventListener('keydown', function(e) {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                    e.preventDefault(); runSqlAndDisplay();
+                }
+            });
+        }
+        overlay.querySelectorAll('.sql-preset-btn').forEach(function(btn) {
+            btn.onclick = function() {
+                if (sqlIn) sqlIn.value = btn.dataset.q;
+                tblDiv.style.display = 'none'; sqlDiv.style.display = '';
+                sqlBtn.classList.add('active'); tblBtn.classList.remove('active');
+                if (sqlIn) sqlIn.focus();
+            };
+        });
     }
 
     function renderGradeEditor() {
@@ -2686,20 +3042,29 @@ function showAdminDashboard() {
     renderOverview();
     renderStudentCards();
     renderResults();
-    renderLogs();
     renderGradeEditor();
     renderSubjectsEditor();
+
+    // Initialise sql.js then render logs and wire SQL view toggle
+    _ensureSqlReady().then(function() {
+        renderLogs();
+        initSqlViewToggle();
+    }).catch(function() {
+        renderLogs();
+        initSqlViewToggle();
+    });
 
     overlay.querySelector('#stuSearch').oninput        = (e) => renderStudentCards(e.target.value);
     overlay.querySelector('#resultsSearch').oninput    = (e) => renderResults(e.target.value);
     overlay.querySelector('#adminDeptSelect').onchange = renderSubjectsEditor;
     overlay.querySelector('#adminSemSelect').onchange  = renderSubjectsEditor;
 
-    overlay.querySelector('#clearLogsBtn').onclick = () => {
-        if (confirm('Clear all student entry logs?')) {
-            studentLogs = []; saveStudentLogs();
-            renderLogs(); renderOverview(); renderStudentCards(); renderResults();
-        }
+    overlay.querySelector('#clearLogsBtn').onclick = function() {
+        if (!confirm('Clear ALL entry/exit logs?\n\nThis cannot be undone.')) return;
+        runSql('DELETE FROM logs');
+        studentLogs = [];
+        saveStudentLogs();
+        renderLogs(); renderOverview(); renderStudentCards(); renderResults();
     };
 
     overlay.querySelector('#clearStudentLoginsBtn').onclick = () => {
@@ -4219,10 +4584,6 @@ function init() {
     if (savedName && savedReg) {
         currentStudentName  = savedName;
         currentStudentRegNo = savedReg;
-
-        // Log a session-restore login so the admin can see the student came back
-        addStudentLog(savedName, savedReg, 'login');
-
         updateStudentDisplay();
         document.getElementById('landingPage').style.display = 'none';
         document.getElementById('mainApp').style.display     = 'block';
@@ -4926,59 +5287,88 @@ function runTour() {
 }
 
 // ============================================================
-// SESSION PERSISTENCE & TAB-CLOSE LOGOUT
-//
-// Design:
-//   • localStorage keeps the session across refreshes (studentName / studentRegNo).
-//   • sessionStorage flag 'sessionAlive' is set on every page load and is
-//     automatically cleared by the browser when the TAB is truly closed.
-//   • On beforeunload we set a flag 'isReloading' in sessionStorage so that
-//     pagehide can distinguish a refresh (reloading=true, flag survives) from
-//     a real tab close (flag won't survive because the tab dies).
-//   • Only on a real tab-close do we log 'logout' and clear the session.
-//   • visibilitychange is used only for silent draft auto-save — it never
-//     triggers a logout or modifies session keys.
+// AUTO-LOGOUT ON TAB CLOSE / WINDOW CLOSE
+// Saves draft and clears session so the next visit goes to login
 // ============================================================
 (function() {
+    /**
+     * Core auto-logout: save draft, clear session keys, redirect to
+     * the landing page (or, if the page is being unloaded, just clear
+     * localStorage so the next fresh load shows the login screen).
+     */
+    function autoLogout(isUnload) {
+        // Only act if a student is currently logged in
+        if (!currentStudentName && !currentStudentRegNo) return;
 
-    // Mark that the session is alive in this tab
-    sessionStorage.setItem('sessionAlive', '1');
+        // Save the latest draft so nothing is lost
+        saveDraft({});
 
-    // ── beforeunload fires on BOTH refresh and real close.
-    //    We set a short-lived 'reloading' flag so pagehide can tell the difference.
-    window.addEventListener('beforeunload', function() {
-        sessionStorage.setItem('reloading', '1');
-        // Always auto-save the draft so nothing is lost
-        try { saveDraft({}); } catch(e) {}
-    });
+        // Log the auto-logout event in admin activity log
+        try {
+            addStudentLog(currentStudentName, currentStudentRegNo, 'logout');
+        } catch(e) {}
 
-    // ── pagehide is reliable on mobile (iOS Safari) and desktop.
-    //    If 'reloading' is still set in sessionStorage it means this is a
-    //    refresh/navigate-away — do NOT log a logout.
-    //    If 'reloading' is NOT set it means the tab was truly closed — log logout
-    //    and clear session so the next fresh open shows the login screen.
-    window.addEventListener('pagehide', function(e) {
-        const isReloading = sessionStorage.getItem('reloading') === '1';
+        // Clear the session (keep draft key intact — restored on next login)
+        localStorage.removeItem('studentName');
+        localStorage.removeItem('studentRegNo');
 
-        if (!isReloading) {
-            // TRUE TAB CLOSE — clear session and log the exit
-            if (currentStudentName || currentStudentRegNo) {
-                try { addStudentLog(currentStudentName, currentStudentRegNo, 'logout'); } catch(ex) {}
-                localStorage.removeItem('studentName');
-                localStorage.removeItem('studentRegNo');
-            }
+        if (isUnload) {
+            // During unload we cannot navigate — the session keys are already
+            // cleared so the next page load will show the login screen.
+            return;
         }
-        // Clear the reload flag regardless (it will be re-set on next beforeunload)
-        sessionStorage.removeItem('reloading');
+
+        // If the page is still open (visibilitychange hidden), reset the UI
+        currentStudentName  = '';
+        currentStudentRegNo = '';
+
+        for (let i = 1; i <= 6; i++) {
+            const inp = document.getElementById(`sem${i}Gpa`);
+            const st  = document.getElementById(`sem${i}Status`);
+            if (inp) inp.value = '';
+            if (st)  st.textContent = '-';
+        }
+        try {
+            document.getElementById('finalCgpa').textContent           = '—';
+            document.getElementById('classificationResult').textContent = '';
+            document.getElementById('gradeSummary').textContent         = '';
+            document.getElementById('gpaValue').textContent             = '—';
+            document.getElementById('totalCredits').textContent         = '0';
+            updateStudentDisplay();
+        } catch(e) {}
+
+        // Show landing / login page
+        const landing = document.getElementById('landingPage');
+        const main    = document.getElementById('mainApp');
+        if (main)    main.style.display    = 'none';
+        if (landing) landing.style.display = 'flex';
+    }
+
+    // ── beforeunload: fires when the tab or browser window is closed,
+    //    or when the user navigates away.  We only clear localStorage here
+    //    (no UI changes possible during unload).
+    window.addEventListener('beforeunload', function() {
+        autoLogout(true);
     });
 
-    // ── visibilitychange: auto-save draft only — never logout
+    // ── pagehide: a more reliable companion to beforeunload on mobile
+    //    browsers (iOS Safari) where beforeunload may not fire.
+    window.addEventListener('pagehide', function(e) {
+        // e.persisted === true means the page went into the bfcache (back/forward);
+        // we still want to logout in that case so the cached page doesn't show
+        // a logged-in state if the user returns to it.
+        autoLogout(true);
+    });
+
+    // ── visibilitychange: fires when the tab is hidden (e.g. the user
+    //    switches tabs or minimises the browser).  On mobile this is also
+    //    the primary signal that the app has been "closed" by the OS.
     document.addEventListener('visibilitychange', function() {
         if (document.visibilityState === 'hidden') {
+            // Save draft silently on hide (acts as an extra auto-save)
             try { saveDraft({}); } catch(e) {}
         }
     });
-
 })();
 </script>
 </body>
