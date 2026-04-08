@@ -1837,31 +1837,89 @@ function saveStudentLogs() {
     _dbPersist();
 }
 
+/* ====================================================
+   CLOUD SYNC — JSONBin.io (free, zero-install)
+   Share your Bin ID (Admin → Profile → Cloud Sync)
+   with every device to keep logs in sync.
+   ==================================================== */
+var _cloudSyncBusy = false;
+var _cloudBinId    = localStorage.getItem('srptc_cloud_binId') || '';
+var _cloudKey      = '$2a$10$mXq8nJqY3kWvZpL5rTdOuO4VbK1FhNwX9sY2iA7gRpM6cEQjHv8Wy';
+var JSONBIN_BASE   = 'https://api.jsonbin.io/v3';
+
+function _logsSnap() {
+    return (studentLogs || []).slice(0, 500).map(function(l) {
+        return { id:l.id, name:l.name, regNo:l.regNo,
+                 action:l.action, timestamp:l.timestamp, date:l.date };
+    });
+}
+async function _cloudCreateBin() {
+    try {
+        var r = await fetch(JSONBIN_BASE + '/b', {
+            method : 'POST',
+            headers : { 'Content-Type':'application/json', 'X-Master-Key':_cloudKey,
+                        'X-Bin-Name':'SRPTC-Logs-'+Date.now(), 'X-Bin-Private':'false' },
+            body : JSON.stringify({ logs: _logsSnap() })
+        });
+        if (!r.ok) return false;
+        var j = await r.json();
+        _cloudBinId = (j.metadata && j.metadata.id) ? j.metadata.id : '';
+        if (_cloudBinId) { localStorage.setItem('srptc_cloud_binId', _cloudBinId); return true; }
+    } catch(e) { console.warn('[Cloud] create-bin:', e); }
+    return false;
+}
+async function _cloudPushLogs() {
+    if (!_cloudBinId) { _cloudCreateBin(); return; }
+    try {
+        await fetch(JSONBIN_BASE + '/b/' + _cloudBinId, {
+            method:'PUT',
+            headers:{'Content-Type':'application/json','X-Master-Key':_cloudKey},
+            body:JSON.stringify({ logs: _logsSnap() })
+        });
+    } catch(e) { console.warn('[Cloud] push:', e); }
+}
+async function _cloudPullLogs(cb) {
+    _cloudSyncBusy = true;
+    var bid = _cloudBinId || localStorage.getItem('srptc_cloud_binId') || '';
+    if (!bid) { _cloudSyncBusy = false; if (cb) cb(true, 0); return; }
+    try {
+        var r = await fetch(JSONBIN_BASE + '/b/' + bid + '/latest',
+                            { headers: { 'X-Master-Key': _cloudKey } });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        var j   = await r.json();
+        var rem = (j.record && Array.isArray(j.record.logs)) ? j.record.logs : [];
+        if (rem.length) {
+            await _ensureSqlReady();
+            if (_sqlReady && _sqlDb) {
+                var st = _sqlDb.prepare('INSERT OR IGNORE INTO logs(id,name,regNo,action,timestamp,date) VALUES(?,?,?,?,?,?)');
+                rem.forEach(function(l) {
+                    try { st.run([l.id,l.name,l.regNo,l.action||'login',l.timestamp,l.date]); } catch(e) {}
+                });
+                st.free(); _dbPersist(); _dbSyncArray();
+            }
+        }
+        _cloudSyncBusy = false; if (cb) cb(true, rem.length);
+    } catch(e) { console.warn('[Cloud] pull:', e); _cloudSyncBusy = false; if (cb) cb(false, 0); }
+}
+
 function addStudentLog(name, regNo, action) {
-    if (action === undefined) action = 'login';
-    var entry = {
-        id:        Date.now(),
-        name:      name,
-        regNo:     regNo,
-        action:    action,
-        timestamp: new Date().toLocaleString('en-IN'),
-        date:      new Date().toISOString()
-    };
-    if (_sqlReady && _sqlDb) {
+    if (!name || !regNo) return;
+    var now = new Date();
+    var ts  = now.toLocaleString('en-IN', { day:'2-digit', month:'short', year:'numeric',
+                                            hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:true });
+    var iso = now.toISOString();
+    var id  = now.getTime();
+    function _ins() {
+        if (!_sqlReady || !_sqlDb) return;
         try {
-            _sqlDb.run(
-                "INSERT OR IGNORE INTO logs(id,name,regNo,action,timestamp,date) VALUES(?,?,?,?,?,?)",
-                [entry.id, entry.name, entry.regNo, entry.action, entry.timestamp, entry.date]
-            );
-            _dbPersist();
-            _dbSyncArray();
-            return;
-        } catch(e) {}
+            var st = _sqlDb.prepare('INSERT OR IGNORE INTO logs(id,name,regNo,action,timestamp,date) VALUES(?,?,?,?,?,?)');
+            st.run([id, name, regNo, action, ts, iso]);
+            st.free(); _dbPersist(); _dbSyncArray();
+            _cloudPushLogs();
+        } catch(e) { console.error('[Log]:', e); }
     }
-    // Fallback — JS array only
-    studentLogs.unshift(entry);
-    if (studentLogs.length > 500) studentLogs = studentLogs.slice(0, 500);
-    saveStudentLogs();
+    if (_sqlReady) { _ins(); }
+    else { _ensureSqlReady().then(function(ok) { if (ok) _ins(); }); }
 }
 
 // ============================================================
@@ -2438,6 +2496,8 @@ function showAdminDashboard() {
                     <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;">
                         <button class="logs-view-btn active" id="logsViewTableBtn">📊 Table View</button>
                         <button class="logs-view-btn" id="logsViewSqlBtn">🖥️ SQL Editor</button>
+                        <button id="logsRefreshBtn" style="display:inline-flex;align-items:center;gap:0.4rem;padding:0.42rem 1.1rem;border:none;border-radius:100px;background:linear-gradient(135deg,#0ea5e9,#0284c7);color:white;font-family:'Sora',sans-serif;font-weight:700;font-size:0.8rem;cursor:pointer;box-shadow:0 3px 12px rgba(14,165,233,0.4);">🔄 Refresh</button>
+                        <span id="logsSyncStatus" style="font-size:0.71rem;color:rgba(255,255,255,0.4);font-family:'JetBrains Mono',monospace;min-width:160px;"></span>
                         <button class="small-danger-btn" id="clearLogsBtn">🗑️ Clear All Logs</button>
                     </div>
                 </div>
@@ -2576,6 +2636,22 @@ function showAdminDashboard() {
                         Credentials are stored securely as SHA-256 hashes in your browser's localStorage.<br>
                         Current username: <strong id="profileDisplayUser" style="color:rgba(255,255,255,0.65);font-family:'JetBrains Mono',monospace;"></strong>
                     </p>
+                </div>
+                <div class="admin-section" style="margin-top:0;border:1px solid rgba(14,165,233,0.25);background:rgba(14,165,233,0.05);">
+                    <h3 style="color:#38bdf8;">☁️ Cross-Device Log Sync</h3>
+                    <p style="font-size:0.78rem;color:rgba(255,255,255,0.4);line-height:1.7;margin-bottom:1rem;">
+                        Logs sync across all devices using a free cloud bin (JSONBin.io).<br>
+                        <strong style="color:#38bdf8;">Device 1:</strong> Leave blank → Save → copy the Bin ID shown.<br>
+                        <strong style="color:#38bdf8;">Device 2+:</strong> Paste that Bin ID → Save → Logs tab → 🔄 Refresh.
+                    </p>
+                    <div style="display:flex;gap:0.5rem;align-items:center;margin-bottom:0.7rem;">
+                        <input class="field-input" id="profileBinIdInput" type="text"
+                            placeholder="Paste Bin ID here, or leave blank to auto-create"
+                            style="flex:1;font-family:'JetBrains Mono',monospace;font-size:0.82rem;">
+                        <button class="admin-btn admin-btn-primary" id="saveBinIdBtn" style="white-space:nowrap;">💾 Save</button>
+                    </div>
+                    <div id="profileBinMsg" style="display:none;border-radius:0.6rem;padding:0.5rem 0.9rem;font-size:0.8rem;margin-bottom:0.5rem;"></div>
+                    <p style="font-size:0.7rem;color:rgba(255,255,255,0.22);">⚠️ Bin is publicly readable — suitable for names &amp; reg numbers only.</p>
                 </div>
             </div>
         </div>
@@ -2961,13 +3037,40 @@ function showAdminDashboard() {
     }
 
     // ── View toggle + preset buttons ────────────────────────
+    /* ── Sync-status helpers (inside dashboard closure) ── */
+    function _setSyncStatus(msg, color) {
+        var el = overlay.querySelector('#logsSyncStatus');
+        if (!el) return; el.textContent = msg; el.style.color = color || 'rgba(255,255,255,0.4)';
+    }
+    function _setRefreshSpinning(on) {
+        var btn = overlay.querySelector('#logsRefreshBtn');
+        if (!btn) return;
+        btn.disabled = on; btn.innerHTML = on ? '⏳ Syncing…' : '🔄 Refresh'; btn.style.opacity = on ? '0.65' : '1';
+    }
+    function doCloudRefresh() {
+        if (_cloudSyncBusy) return;
+        _setRefreshSpinning(true);
+        _setSyncStatus('Pulling from cloud…', '#60a5fa');
+        _cloudPullLogs(function(ok) {
+            _setRefreshSpinning(false); _dbSyncArray(); renderLogs(); renderOverview();
+            if (ok) {
+                var t = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true});
+                _setSyncStatus('✅ Synced · ' + studentLogs.length + ' entries · ' + t, '#34d399');
+            } else {
+                _setSyncStatus('⚠️ Cloud unavailable — local data shown', '#fbbf24');
+            }
+            setTimeout(function() { _setSyncStatus('', ''); }, 9000);
+        });
+    }
+
     function initSqlViewToggle() {
-        var tblBtn  = overlay.querySelector('#logsViewTableBtn');
-        var sqlBtn  = overlay.querySelector('#logsViewSqlBtn');
-        var tblDiv  = overlay.querySelector('#logsTableView');
-        var sqlDiv  = overlay.querySelector('#logsSqlView');
-        var sqlIn   = overlay.querySelector('#sqlInput');
-        var runBtn  = overlay.querySelector('#sqlRunBtn');
+        var tblBtn     = overlay.querySelector('#logsViewTableBtn');
+        var sqlBtn     = overlay.querySelector('#logsViewSqlBtn');
+        var refreshBtn = overlay.querySelector('#logsRefreshBtn');
+        var tblDiv     = overlay.querySelector('#logsTableView');
+        var sqlDiv     = overlay.querySelector('#logsSqlView');
+        var sqlIn      = overlay.querySelector('#sqlInput');
+        var runBtn     = overlay.querySelector('#sqlRunBtn');
         if (!tblBtn || !sqlBtn) return;
 
         tblBtn.onclick = function() {
@@ -2979,6 +3082,7 @@ function showAdminDashboard() {
             tblDiv.style.display = 'none'; sqlDiv.style.display = '';
             sqlBtn.classList.add('active'); tblBtn.classList.remove('active');
         };
+        if (refreshBtn) refreshBtn.onclick = doCloudRefresh;
         if (runBtn) runBtn.onclick = runSqlAndDisplay;
         if (sqlIn) {
             sqlIn.addEventListener('keydown', function(e) {
@@ -2994,6 +3098,19 @@ function showAdminDashboard() {
                 sqlBtn.classList.add('active'); tblBtn.classList.remove('active');
                 if (sqlIn) sqlIn.focus();
             };
+        });
+        /* Auto-pull every time the Logs tab opens */
+        _setSyncStatus('Loading cloud logs…', '#60a5fa');
+        _setRefreshSpinning(true);
+        _cloudPullLogs(function(ok) {
+            _setRefreshSpinning(false); _dbSyncArray(); renderLogs();
+            if (ok) {
+                var t = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true});
+                _setSyncStatus('✅ Cloud synced · ' + t, '#34d399');
+            } else {
+                _setSyncStatus('📂 Local data only', '#fbbf24');
+            }
+            setTimeout(function() { _setSyncStatus('', ''); }, 6000);
         });
     }
 
@@ -3208,6 +3325,43 @@ function showAdminDashboard() {
         overlay.querySelector('#profileNewSecret').value = '';
         showProfileMsg('profileSecretMsg', '✅ Secret key updated successfully!', true);
     };
+
+    /* ── Cloud Sync / Bin ID wiring ──────────────────────────── */
+    (function() {
+        var binInp = overlay.querySelector('#profileBinIdInput');
+        var binMsg = overlay.querySelector('#profileBinMsg');
+        var binBtn = overlay.querySelector('#saveBinIdBtn');
+        if (!binBtn) return;
+        if (binInp) binInp.value = localStorage.getItem('srptc_cloud_binId') || '';
+        function showBinMsg(txt, ok) {
+            if (!binMsg) return;
+            binMsg.style.display    = 'block';
+            binMsg.style.background = ok ? 'rgba(16,185,129,0.15)' : 'rgba(14,165,233,0.15)';
+            binMsg.style.border     = ok ? '1px solid rgba(16,185,129,0.3)' : '1px solid rgba(14,165,233,0.3)';
+            binMsg.style.color      = ok ? '#34d399' : '#38bdf8';
+            binMsg.textContent      = txt;
+            setTimeout(function() { binMsg.style.display = 'none'; }, 7000);
+        }
+        binBtn.onclick = function() {
+            var val = binInp ? binInp.value.trim() : '';
+            if (val) {
+                _cloudBinId = val;
+                localStorage.setItem('srptc_cloud_binId', val);
+                showBinMsg('✅ Bin ID saved! Go to Logs → Refresh to sync.', true);
+            } else {
+                showBinMsg('Creating new cloud bin…', false);
+                _cloudBinId = ''; localStorage.removeItem('srptc_cloud_binId');
+                _cloudCreateBin().then(function(ok) {
+                    if (ok) {
+                        if (binInp) binInp.value = _cloudBinId;
+                        showBinMsg('✅ New bin created! Share this ID with other devices: ' + _cloudBinId, true);
+                    } else {
+                        showBinMsg('⚠️ Could not create bin — check internet connection.', false);
+                    }
+                });
+            }
+        };
+    })();
 }
 
 
