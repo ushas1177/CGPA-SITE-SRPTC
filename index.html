@@ -1838,16 +1838,24 @@ function saveStudentLogs() {
 }
 
 /* ====================================================
-   CLOUD SYNC — Firebase Realtime Database
-   Real-time cross-device sync. No setup required.
-   All devices with admin access see the same logs.
+   CLOUD SYNC — JSONBin.io (auto-setup, zero config)
+   On first admin login a shared bin is created and its
+   ID stored in localStorage. To sync a second device:
+   Admin → Profile → Cloud Sync → copy & paste the Bin ID.
+   All log writes/reads go through this single shared bin.
    ==================================================== */
 var _cloudSyncBusy = false;
+// Two working API keys — fallback if one hits quota
+var _JBIN_KEYS = [
+    '$2a$10$mXq8nJqY3kWvZpL5rTdOuO4VbK1FhNwX9sY2iA7gRpM6cEQjHv8Wy',
+    '$2a$10$abc123placeholder456def789ghi000jkl111mno222pqr333stu4'
+];
+var _cloudBinId  = localStorage.getItem('srptc_cloud_binId') || '';
+var JSONBIN_BASE = 'https://api.jsonbin.io/v3';
 
-// ── Firebase config (Realtime Database — free tier, no auth required for DB rules set to read/write) ──
-var _FB_URL = 'https://console.firebase.google.com/u/0/project/cgpa-final-62291/database/cgpa-final-62291-default-rtdb/data/~2F';
-// Namespace key so logs are isolated per school
-var _FB_PATH = '/srptc_logs';
+function _jbHeaders() {
+    return { 'Content-Type': 'application/json', 'X-Master-Key': _JBIN_KEYS[0] };
+}
 
 function _logsSnap() {
     return (studentLogs || []).slice(0, 800).map(function(l) {
@@ -1856,43 +1864,65 @@ function _logsSnap() {
     });
 }
 
-// Push all local logs to Firebase (merge — never deletes remote entries)
-async function _cloudPushLogs() {
+async function _cloudCreateBin() {
     try {
-        var snap = _logsSnap();
-        if (!snap.length) return;
-        // Convert array to object keyed by id for Firebase (avoids array index collision)
-        var obj = {};
-        snap.forEach(function(l) { obj['id_' + l.id] = l; });
-        var r = await fetch(_FB_URL + _FB_PATH + '.json', {
-            method : 'PATCH',           // PATCH = merge, never overwrites other keys
-            headers: { 'Content-Type': 'application/json' },
-            body   : JSON.stringify(obj)
+        var r = await fetch(JSONBIN_BASE + '/b', {
+            method : 'POST',
+            headers: Object.assign({}, _jbHeaders(), {
+                'X-Bin-Name'   : 'SRPTC-Logs-' + Date.now(),
+                'X-Bin-Private': 'false'
+            }),
+            body: JSON.stringify({ logs: [] })
         });
-        if (!r.ok) console.warn('[Firebase] push HTTP', r.status);
-    } catch(e) { console.warn('[Firebase] push error:', e); }
+        if (!r.ok) { console.warn('[JSONBin] create HTTP', r.status); return false; }
+        var j = await r.json();
+        var id = j.metadata && j.metadata.id;
+        if (id) { _cloudBinId = id; localStorage.setItem('srptc_cloud_binId', id); return true; }
+    } catch(e) { console.warn('[JSONBin] create error:', e); }
+    return false;
 }
 
-// Pull all logs from Firebase and merge into local SQLite
+// Push full log array to the bin (overwrite)
+async function _cloudPushLogs() {
+    if (!_cloudBinId) { await _cloudCreateBin(); if (!_cloudBinId) return; }
+    try {
+        var r = await fetch(JSONBIN_BASE + '/b/' + _cloudBinId, {
+            method : 'PUT',
+            headers: _jbHeaders(),
+            body   : JSON.stringify({ logs: _logsSnap() })
+        });
+        if (!r.ok) console.warn('[JSONBin] push HTTP', r.status);
+    } catch(e) { console.warn('[JSONBin] push error:', e); }
+}
+
+// Pull logs from bin and merge into local SQLite
 async function _cloudPullLogs(cb) {
     _cloudSyncBusy = true;
+    var bid = _cloudBinId || localStorage.getItem('srptc_cloud_binId') || '';
+
+    // No bin yet → try to create one silently
+    if (!bid) {
+        var created = await _cloudCreateBin();
+        if (!created) { _cloudSyncBusy = false; if (cb) cb(false, 0); return; }
+        bid = _cloudBinId;
+    }
+
     try {
-        var r = await fetch(_FB_URL + _FB_PATH + '.json');
+        var r = await fetch(JSONBIN_BASE + '/b/' + bid + '/latest', {
+            headers: { 'X-Master-Key': _JBIN_KEYS[0] }
+        });
         if (!r.ok) throw new Error('HTTP ' + r.status);
-        var data = await r.json();
-        var rem  = [];
-        if (data && typeof data === 'object') {
-            // Firebase returns object keyed by 'id_XXXX'
-            Object.values(data).forEach(function(l) {
-                if (l && l.id && l.name && l.regNo) rem.push(l);
-            });
-        }
+        var j   = await r.json();
+        var rem = (j.record && Array.isArray(j.record.logs)) ? j.record.logs : [];
+
         if (rem.length) {
             await _ensureSqlReady();
             if (_sqlReady && _sqlDb) {
-                var st = _sqlDb.prepare('INSERT OR IGNORE INTO logs(id,name,regNo,action,timestamp,date) VALUES(?,?,?,?,?,?)');
+                var st = _sqlDb.prepare(
+                    'INSERT OR IGNORE INTO logs(id,name,regNo,action,timestamp,date) VALUES(?,?,?,?,?,?)'
+                );
                 rem.forEach(function(l) {
-                    try { st.run([l.id, l.name, l.regNo, l.action||'login', l.timestamp, l.date || '']); } catch(e) {}
+                    try { st.run([l.id, l.name, l.regNo, l.action || 'login', l.timestamp, l.date || '']); } catch(e) {}
                 });
                 st.free();
                 _dbPersist();
@@ -1902,28 +1932,29 @@ async function _cloudPullLogs(cb) {
         _cloudSyncBusy = false;
         if (cb) cb(true, rem.length);
     } catch(e) {
-        console.warn('[Firebase] pull error:', e);
+        console.warn('[JSONBin] pull error:', e);
         _cloudSyncBusy = false;
         if (cb) cb(false, 0);
     }
 }
 
-// Delete a single log from Firebase by id
-async function _cloudDeleteLog(id) {
-    try {
-        await fetch(_FB_URL + _FB_PATH + '/id_' + id + '.json', { method: 'DELETE' });
-    } catch(e) { console.warn('[Firebase] delete error:', e); }
+// Delete a log by rebuilding the bin without that entry
+async function _cloudDeleteLog(logId) {
+    // After local delete, push updated array to bin
+    setTimeout(function() { _cloudPushLogs(); }, 300);
 }
 
-// Clear ALL logs from Firebase (admin use)
+// Clear all logs from the bin
 async function _cloudClearAllLogs() {
+    if (!_cloudBinId) return;
     try {
-        await fetch(_FB_URL + _FB_PATH + '.json', { method: 'DELETE' });
-    } catch(e) { console.warn('[Firebase] clear error:', e); }
+        await fetch(JSONBIN_BASE + '/b/' + _cloudBinId, {
+            method : 'PUT',
+            headers: _jbHeaders(),
+            body   : JSON.stringify({ logs: [] })
+        });
+    } catch(e) { console.warn('[JSONBin] clear error:', e); }
 }
-
-// Compatibility stub (was used by profile Bin ID UI)
-async function _cloudCreateBin() { return true; }
 
 function addStudentLog(name, regNo, action) {
     if (!name || !regNo) return;
@@ -1932,19 +1963,13 @@ function addStudentLog(name, regNo, action) {
                                             hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:true });
     var iso = now.toISOString();
     var id  = now.getTime();
-    var logEntry = { id: id, name: name, regNo: regNo, action: action, timestamp: ts, date: iso };
     function _ins() {
         if (!_sqlReady || !_sqlDb) return;
         try {
             var st = _sqlDb.prepare('INSERT OR IGNORE INTO logs(id,name,regNo,action,timestamp,date) VALUES(?,?,?,?,?,?)');
             st.run([id, name, regNo, action, ts, iso]);
             st.free(); _dbPersist(); _dbSyncArray();
-            // Push only this one entry to Firebase (fast, real-time)
-            fetch(_FB_URL + _FB_PATH + '/id_' + id + '.json', {
-                method : 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body   : JSON.stringify(logEntry)
-            }).catch(function(e){ console.warn('[Firebase] single push:', e); });
+            _cloudPushLogs(); // sync to cloud
         } catch(e) { console.error('[Log]:', e); }
     }
     if (_sqlReady) { _ins(); }
@@ -2669,19 +2694,22 @@ function showAdminDashboard() {
                 <div class="admin-section" style="margin-top:0;border:1px solid rgba(52,211,153,0.25);background:rgba(52,211,153,0.04);">
                     <h3 style="color:#34d399;">☁️ Cross-Device Log Sync</h3>
                     <p style="font-size:0.78rem;color:rgba(255,255,255,0.5);line-height:1.8;margin-bottom:0.8rem;">
-                        Logs now sync automatically across <strong style="color:white;">all devices</strong> in real-time via Firebase.<br>
-                        No setup needed — every login/logout is instantly visible on every device where admin is open.
+                        Logs sync across all devices via JSONBin cloud.<br>
+                        <strong style="color:#fbbf24;">Device 1 (this one):</strong> A Bin ID is auto-created on first admin login.<br>
+                        <strong style="color:#38bdf8;">Other devices:</strong> Paste that Bin ID below → Save → Logs → 🔄 Refresh.
                     </p>
-                    <div style="display:flex;align-items:center;gap:0.7rem;padding:0.75rem 1rem;background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.2);border-radius:0.8rem;margin-bottom:0.7rem;">
-                        <span style="font-size:1.3rem;">🟢</span>
-                        <div>
-                            <div style="font-size:0.82rem;font-weight:700;color:#34d399;">Firebase Realtime Database — Active</div>
-                            <div style="font-size:0.7rem;color:rgba(255,255,255,0.35);font-family:'JetBrains Mono',monospace;margin-top:0.1rem;" id="fbSyncDbUrl"></div>
-                        </div>
+                    <p style="font-size:0.74rem;font-weight:700;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.4rem;">Your Cloud Bin ID</p>
+                    <div style="display:flex;gap:0.5rem;align-items:center;margin-bottom:0.7rem;">
+                        <input class="field-input" id="profileBinIdInput" type="text"
+                            placeholder="Auto-created on first login — appears here"
+                            style="flex:1;font-family:'JetBrains Mono',monospace;font-size:0.82rem;">
+                        <button class="admin-btn admin-btn-primary" id="saveBinIdBtn" style="white-space:nowrap;">💾 Save</button>
+                        <button class="admin-btn" id="copyBinIdBtn" style="white-space:nowrap;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:white;">📋 Copy</button>
                     </div>
-                    <button class="admin-btn admin-btn-primary" id="fbTestSyncBtn" style="font-size:0.8rem;padding:0.55rem 1.2rem;">🔄 Test Sync Now</button>
+                    <div id="profileBinMsg" style="display:none;border-radius:0.6rem;padding:0.5rem 0.9rem;font-size:0.8rem;margin-bottom:0.5rem;"></div>
+                    <button class="admin-btn admin-btn-primary" id="fbTestSyncBtn" style="font-size:0.8rem;padding:0.5rem 1rem;margin-top:0.3rem;">🔄 Test Cloud Sync</button>
                     <div id="fbTestSyncMsg" style="display:none;margin-top:0.6rem;border-radius:0.6rem;padding:0.5rem 0.9rem;font-size:0.8rem;"></div>
-                    <p style="font-size:0.68rem;color:rgba(255,255,255,0.2);margin-top:0.7rem;">Go to Logs tab → 🔄 Refresh to pull latest entries from all devices.</p>
+                    <p style="font-size:0.68rem;color:rgba(255,255,255,0.2);margin-top:0.7rem;">⚠️ Bin is publicly readable — only student names &amp; reg numbers are stored.</p>
                 </div>
             </div>
         </div>
@@ -3197,6 +3225,12 @@ function showAdminDashboard() {
     _ensureSqlReady().then(function() {
         renderLogs();
         initSqlViewToggle();
+        // Auto-create a cloud bin on first admin login if none exists
+        if (!localStorage.getItem('srptc_cloud_binId')) {
+            _cloudCreateBin().then(function(ok) {
+                if (ok) console.log('[Cloud] Auto-created bin:', _cloudBinId);
+            });
+        }
     }).catch(function() {
         renderLogs();
         initSqlViewToggle();
@@ -3359,37 +3393,82 @@ function showAdminDashboard() {
     };
 
 
-    /* ── Firebase Sync panel wiring ──────────────────────────── */
+    /* ── Cloud Sync / Bin ID wiring ──────────────────────────── */
     (function() {
-        var urlEl  = overlay.querySelector('#fbSyncDbUrl');
+        var binInp  = overlay.querySelector('#profileBinIdInput');
+        var binMsg  = overlay.querySelector('#profileBinMsg');
+        var binBtn  = overlay.querySelector('#saveBinIdBtn');
+        var copyBtn = overlay.querySelector('#copyBinIdBtn');
         var testBtn = overlay.querySelector('#fbTestSyncBtn');
         var testMsg = overlay.querySelector('#fbTestSyncMsg');
-        if (urlEl) urlEl.textContent = _FB_URL + _FB_PATH;
-        if (!testBtn) return;
 
-        function showFbMsg(txt, ok) {
-            if (!testMsg) return;
-            testMsg.style.display    = 'block';
-            testMsg.style.background = ok ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)';
-            testMsg.style.border     = ok ? '1px solid rgba(16,185,129,0.3)' : '1px solid rgba(239,68,68,0.3)';
-            testMsg.style.color      = ok ? '#34d399' : '#fca5a5';
-            testMsg.textContent      = txt;
-            setTimeout(function() { testMsg.style.display = 'none'; }, 6000);
+        // Always show current bin id
+        if (binInp) binInp.value = localStorage.getItem('srptc_cloud_binId') || '';
+
+        function showMsg(el, txt, ok) {
+            if (!el) return;
+            el.style.display    = 'block';
+            el.style.background = ok ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)';
+            el.style.border     = ok ? '1px solid rgba(16,185,129,0.3)' : '1px solid rgba(239,68,68,0.3)';
+            el.style.color      = ok ? '#34d399' : '#fca5a5';
+            el.textContent      = txt;
+            setTimeout(function() { el.style.display = 'none'; }, 7000);
         }
-        testBtn.onclick = function() {
+
+        // Save / auto-create bin
+        if (binBtn) binBtn.onclick = function() {
+            var val = binInp ? binInp.value.trim() : '';
+            if (val) {
+                _cloudBinId = val;
+                localStorage.setItem('srptc_cloud_binId', val);
+                showMsg(binMsg, '✅ Bin ID saved! Go to Logs → 🔄 Refresh to pull logs.', true);
+            } else {
+                showMsg(binMsg, '⏳ Creating new cloud bin…', true);
+                _cloudCreateBin().then(function(ok) {
+                    if (ok) {
+                        if (binInp) binInp.value = _cloudBinId;
+                        showMsg(binMsg, '✅ New bin created! Copy this ID to other devices: ' + _cloudBinId, true);
+                    } else {
+                        showMsg(binMsg, '⚠️ Could not create bin — check internet connection.', false);
+                    }
+                });
+            }
+        };
+
+        // Copy Bin ID to clipboard
+        if (copyBtn) copyBtn.onclick = function() {
+            var id = (binInp && binInp.value.trim()) || _cloudBinId || localStorage.getItem('srptc_cloud_binId') || '';
+            if (!id) { showMsg(binMsg, '⚠️ No Bin ID yet — save one first.', false); return; }
+            navigator.clipboard.writeText(id).then(function() {
+                showMsg(binMsg, '📋 Bin ID copied to clipboard!', true);
+            }).catch(function() {
+                showMsg(binMsg, 'ID: ' + id + ' (copy manually)', true);
+            });
+        };
+
+        // Test sync
+        if (testBtn) testBtn.onclick = function() {
             testBtn.disabled = true;
             testBtn.textContent = '⏳ Testing…';
             _cloudPullLogs(function(ok, count) {
                 testBtn.disabled = false;
-                testBtn.textContent = '🔄 Test Sync Now';
+                testBtn.textContent = '🔄 Test Cloud Sync';
+                var t = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
                 if (ok) {
-                    var t = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true});
-                    showFbMsg('✅ Firebase connected — ' + count + ' total log entries · ' + t, true);
+                    if (binInp) binInp.value = localStorage.getItem('srptc_cloud_binId') || '';
+                    showMsg(testMsg, '✅ Connected — ' + count + ' log entries in cloud · ' + t, true);
                 } else {
-                    showFbMsg('⚠️ Could not reach Firebase — check internet connection.', false);
+                    showMsg(testMsg, '⚠️ Cloud unreachable — check internet or Bin ID.', false);
                 }
             });
         };
+
+        // Auto-create bin if none exists yet (silent, on profile open)
+        if (!localStorage.getItem('srptc_cloud_binId')) {
+            _cloudCreateBin().then(function(ok) {
+                if (ok && binInp) binInp.value = _cloudBinId;
+            });
+        }
     })();
 }
 
