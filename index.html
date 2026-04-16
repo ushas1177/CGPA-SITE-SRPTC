@@ -7,9 +7,50 @@
     <link rel="icon" type="image/png" href="srptc.png">
     <link rel="apple-touch-icon" href="srptc.png">
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script>
+    /* Load jsPDF with automatic fallback CDN */
+    (function() {
+        function loadScript(src, onok, onerr) {
+            var s = document.createElement('script');
+            s.src = src;
+            s.onload = onok;
+            s.onerror = onerr;
+            document.head.appendChild(s);
+        }
+        var primary   = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+        var fallback1 = 'https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js';
+        var fallback2 = 'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js';
+        function onJsPdfLoad() { window.__jspdfLoaded = true; }
+        loadScript(primary, onJsPdfLoad, function() {
+            loadScript(fallback1, onJsPdfLoad, function() {
+                loadScript(fallback2, onJsPdfLoad, null);
+            });
+        });
+    })();
+    /* Load html2canvas with automatic fallback CDN */
+    (function() {
+        function loadScript(src, onok, onerr) {
+            var s = document.createElement('script');
+            s.src = src;
+            s.onload = onok;
+            s.onerror = onerr;
+            document.head.appendChild(s);
+        }
+        var primary   = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+        var fallback1 = 'https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js';
+        var fallback2 = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+        function onH2cLoad() { window.__html2canvasLoaded = true; }
+        loadScript(primary, onH2cLoad, function() {
+            loadScript(fallback1, onH2cLoad, function() {
+                loadScript(fallback2, onH2cLoad, null);
+            });
+        });
+    })();
+    </script>
     <!-- sql.js: SQLite compiled to WebAssembly — runs fully in-browser, nothing to install -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/sql-wasm.js"></script>
+    <!-- Supabase JS SDK for cross-device log sync -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <style>
         :root {
             --navy: #0b1f3a;
@@ -34,7 +75,6 @@
             overflow-x: hidden;
         }
 
-        /* ========== GLOBAL COLLEGE HEADER ========== */
         #globalCollegeHeader {
             position: fixed;
             top: 0; left: 0; right: 0;
@@ -87,7 +127,6 @@
         #landingPage  { padding-top: 70px; }
         #mainApp      { padding-top: 90px; }
 
-        /* ========== LANDING PAGE ========== */
         #landingPage {
             position: fixed; inset: 0; z-index: 9000;
             display: flex; flex-direction: column;
@@ -184,7 +223,6 @@
         }
         .chip strong { color: var(--accent); }
 
-        /* ========== MODAL ========== */
         .modal-overlay {
             position: fixed; inset: 0; z-index: 10000;
             background: rgba(0,0,0,0.85); backdrop-filter: blur(12px);
@@ -253,7 +291,6 @@
             font-size: 0.82rem; margin-top: 0.8rem; display: none;
         }
 
-        /* ========== DRAFT INDICATOR ========== */
         .draft-notice {
             background: rgba(245,158,11,0.1);
             border: 1px solid rgba(245,158,11,0.3);
@@ -265,7 +302,6 @@
             text-align: center;
         }
 
-        /* ========== MAIN APP ========== */
         #mainApp { display: none; padding: 1.5rem; max-width: 1400px; margin: 0 auto; }
 
         .app-header { text-align: center; padding: 2rem 1rem 2.5rem; position: relative; }
@@ -294,6 +330,24 @@
             padding: 1.2rem 1.5rem;
         }
         .card-header h2 { font-size: 1.05rem; font-weight: 700; color: white; }
+
+        .card-header-student-info {
+            display: none;
+            font-size: 0.7rem;
+            color: rgba(255,255,255,0.45);
+            margin-top: 0.25rem;
+            font-family: 'JetBrains Mono', monospace;
+            letter-spacing: 0.03em;
+        }
+        .card-header-student-info .chi-name {
+            color: var(--accent-glow);
+            font-weight: 700;
+            font-family: 'Sora', sans-serif;
+        }
+        .card-header-student-info .chi-reg {
+            color: rgba(255,255,255,0.5);
+            font-weight: 600;
+        }
 
         .card-body { padding: 1.5rem; }
 
@@ -486,7 +540,6 @@
             color: rgba(255,255,255,0.3); font-size: 0.72rem;
         }
 
-        /* ========== ADMIN DASHBOARD ========== */
         .admin-overlay {
             position: fixed; inset: 0; z-index: 10000;
             background: rgba(5,12,25,0.97); backdrop-filter: blur(16px);
@@ -663,9 +716,6 @@
             .admin-tabs { flex-wrap: wrap; border-radius: 1rem; }
         }
 
-        /* ===================================================
-           PRINT OVERLAY
-        =================================================== */
         #printOverlay {
             display: none; position: fixed; inset: 0; z-index: 20000;
             background: rgba(0,0,0,0.88); backdrop-filter: blur(14px);
@@ -720,12 +770,6 @@
         }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* ===================================================
-           PRINTABLE CONTENT — Full A4 PDF layout
-           A4 = 210mm wide. At 96dpi = 794px.
-           PDF margins 10mm each side = 20mm total = ~76px
-           Safe content width = 794 - 76 = 718px
-        =================================================== */
         #printableContent {
             padding: 24px 28px;
             font-family: 'Sora', Arial, sans-serif;
@@ -739,10 +783,6 @@
             position: relative;
         }
 
-        /* ===================================================
-           WATERMARK — Full-page centered stamp
-           Sits behind all content via z-index
-        =================================================== */
         .rpt-watermark-wrap {
             position: relative;
         }
@@ -751,7 +791,6 @@
             z-index: 1;
         }
 
-        /* ===== PER-BLOCK WATERMARK STAMP ===== */
         /* Applied to each marksheet semester block and academic report container */
         .rpt-wm-stamp {
             position: absolute;
@@ -826,7 +865,7 @@
 
         /* Logo wrapper — keeps img + fallback in ONE grid cell */
         .rpt-logo-wrap {
-            width: 58px; height: 58px; flex-shrink: 0;
+            width: 82px; height: 82px; flex-shrink: 0;
             position: relative;
         }
         .rpt-logo-wrap .rpt-logo-img,
@@ -834,14 +873,10 @@
             position: absolute; top: 0; left: 0;
         }
 
-        /* =======================================================
-           REPORT HEADER — Official document layout
-           Logo (left) | College Name + Details (center) | Doc Title (right)
-        ======================================================= */
         .rpt-header {
             border-bottom: 3px solid #1a4a8a;
-            padding-bottom: 10px;
-            margin-bottom: 14px;
+            padding-bottom: 14px;
+            margin-bottom: 16px;
             width: 100%;
             box-sizing: border-box;
         }
@@ -849,27 +884,30 @@
         /* Three-column grid: logo | centre info | doc title */
         .rpt-header-top {
             display: grid;
-            grid-template-columns: 62px 1fr auto;
+            grid-template-columns: 88px 1fr auto;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
             width: 100%;
         }
 
         /* Logo — larger, clearly visible */
         .rpt-logo-img {
-            width: 58px; height: 58px; border-radius: 50%;
-            object-fit: contain; background: white; padding: 4px; flex-shrink: 0;
+            width: 82px; height: 82px; border-radius: 50%;
+            object-fit: contain; background: white; padding: 5px; flex-shrink: 0;
             border: 2.5px solid #1a4a8a;
             box-shadow: 0 2px 8px rgba(26,74,138,0.18);
             display: block;
         }
 
         .rpt-logo-fallback {
-            width: 58px; height: 58px; border-radius: 50%;
+            width: 82px; height: 82px; border-radius: 50%;
             background: linear-gradient(135deg, #1a4a8a, #0ea5e9);
             display: flex; align-items: center; justify-content: center;
-            font-size: 1.5rem; flex-shrink: 0; color: white;
+            font-size: 0.9rem; flex-shrink: 0; color: white;
+            font-weight: 800; letter-spacing: 0.04em; text-align: center;
+            line-height: 1.2; padding: 4px;
             box-shadow: 0 2px 8px rgba(26,74,138,0.18);
+            border: 2.5px solid #1a4a8a;
         }
 
         /* Centre column — college name, sub-title, address */
@@ -879,27 +917,27 @@
         }
 
         .rpt-college-name {
-            font-size: 13px; font-weight: 800; color: #1a4a8a;
+            font-size: 18px; font-weight: 800; color: #1a4a8a;
             text-transform: uppercase; letter-spacing: 0.06em; line-height: 1.1;
         }
 
         .rpt-college-sub {
-            font-size: 8px; color: #475569; letter-spacing: 0.04em;
-            text-transform: uppercase; margin-top: 2px; line-height: 1.2;
+            font-size: 11px; color: #475569; letter-spacing: 0.04em;
+            text-transform: uppercase; margin-top: 3px; line-height: 1.2;
             font-weight: 600;
         }
 
         .rpt-college-address {
-            font-size: 8px; color: #6b7280; margin-top: 2px; line-height: 1.3;
+            font-size: 10px; color: #6b7280; margin-top: 3px; line-height: 1.3;
         }
         .rpt-college-address span {
             display: inline-block; margin-right: 6px;
         }
         .rpt-institute-code {
-            font-size: 9.5px; font-weight: 700; color: #1a4a8a;
+            font-size: 11px; font-weight: 700; color: #1a4a8a;
             background: #eef3fb; border: 1px solid #c7d8f0;
-            padding: 1px 8px; border-radius: 100px; display: inline-block;
-            margin-top: 3px; letter-spacing: 0.06em;
+            padding: 2px 10px; border-radius: 100px; display: inline-block;
+            margin-top: 4px; letter-spacing: 0.06em;
         }
 
         /* Doc title — right column */
@@ -910,11 +948,11 @@
             padding-left: 14px;
         }
         .rpt-doc-title h2 {
-            font-size: 11px; font-weight: 800; color: #1a4a8a;
+            font-size: 14px; font-weight: 800; color: #1a4a8a;
             margin: 0; white-space: nowrap;
         }
         .rpt-doc-title p {
-            font-size: 8px; color: #94a3b8; margin: 3px 0 0; white-space: nowrap;
+            font-size: 10px; color: #94a3b8; margin: 3px 0 0; white-space: nowrap;
         }
 
         /* --- Student Info Box --- */
@@ -925,14 +963,14 @@
             width: 100%; box-sizing: border-box;
         }
 
-        .rpt-student-cell { padding: 6px 10px; border-right: 1px solid #c7d8f0; }
+        .rpt-student-cell { padding: 14px 14px; border-right: 1px solid #c7d8f0; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 90px; }
         .rpt-student-cell:last-child { border-right: none; }
 
         .rpt-cell-label {
-            font-size: 9px; font-weight: 700; letter-spacing: 0.08em;
-            text-transform: uppercase; color: #64748b; margin-bottom: 3px;
+            font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+            text-transform: uppercase; color: #64748b; margin-bottom: 5px; text-align: center;
         }
-        .rpt-cell-value { font-size: 12.5px; font-weight: 700; color: #1a202c; line-height: 1.2; }
+        .rpt-cell-value { font-size: 15px; font-weight: 700; color: #1a202c; line-height: 1.3; text-align: center; }
 
         /* --- Section Title --- */
         .rpt-section-title {
@@ -1059,12 +1097,6 @@
             color: #374151; text-align: center; white-space: nowrap; line-height: 1.4;
         }
 
-        /* ======================================================
-           @media print
-        ====================================================== */
-        /* ===================================================
-           MARK SHEET STYLES
-        =================================================== */
         .rpt-marksheet-table tbody td:first-child { text-align: center; font-family: 'JetBrains Mono','Courier New',monospace; font-size: 10px; color: #64748b; }
         .rpt-marksheet-table tbody td:nth-child(2) { text-align: left !important; font-size: 11px; word-wrap: break-word; overflow-wrap: break-word; }
         .rpt-marksheet-table .ms-total-row { background: #eef3fb !important; font-weight: 700; border-top: 2px solid #1a4a8a; }
@@ -1078,7 +1110,7 @@
         .rpt-ms-sem-header .sem-title { font-size: 11px; font-weight: 800; color: white; text-transform: uppercase; letter-spacing: 0.05em; }
         .rpt-ms-sem-header .sem-gpa-pill { background: rgba(255,255,255,0.25); color: white; padding: 2px 10px; border-radius: 100px; font-size: 10px; font-weight: 700; font-family: 'JetBrains Mono','Courier New',monospace; }
 
-        .rpt-ms-wrap { margin-bottom: 6px; border: 1px solid #c7d8f0; border-radius: 4px; overflow: visible; page-break-inside: avoid; position: relative; }
+        .rpt-ms-wrap { margin-bottom: 10px; border: 1px solid #c7d8f0; border-radius: 4px; overflow: visible; page-break-inside: avoid; break-inside: avoid; position: relative; }
 
         .rpt-download-strip {
             display: flex; gap: 0.75rem; flex-wrap: wrap;
@@ -1133,7 +1165,7 @@
             }
         }
     
-        /* ===== SQL EDITOR — Logs tab ===== */
+
         .sql-editor-wrap{background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.1);border-radius:1rem;padding:1rem 1.1rem;margin-bottom:1rem}
         .sql-editor-label{font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.35);margin-bottom:.4rem;display:flex;align-items:center;gap:.5rem}
         .sql-badge{background:rgba(245,158,11,.2);color:#fbbf24;border:1px solid rgba(245,158,11,.35);border-radius:4px;padding:.05rem .4rem;font-size:.62rem;letter-spacing:.06em}
@@ -1154,6 +1186,57 @@
         .sql-result-table td{padding:.5rem .75rem;color:rgba(255,255,255,.8);border-bottom:1px solid rgba(255,255,255,.04);font-family:'JetBrains Mono',monospace}
         .sql-result-table tr:last-child td{border-bottom:none}
         .sql-result-table tr:hover td{background:rgba(255,255,255,.03)}
+
+        .photo-upload-zone {
+            display: flex; align-items: center; gap: 1rem;
+            background: rgba(255,255,255,0.04); border: 1.5px dashed rgba(245,158,11,0.35);
+            border-radius: 0.9rem; padding: 0.85rem 1rem; margin-top: 0.8rem; cursor: pointer;
+            transition: all 0.2s;
+        }
+        .photo-upload-zone:hover { border-color: rgba(245,158,11,0.65); background: rgba(245,158,11,0.06); }
+        .photo-preview-thumb {
+            width: 54px; height: 68px; border-radius: 6px; object-fit: cover;
+            border: 2px solid rgba(245,158,11,0.5); flex-shrink: 0; display: none;
+            background: rgba(255,255,255,0.07);
+        }
+        .photo-upload-placeholder {
+            width: 54px; height: 68px; border-radius: 6px; flex-shrink: 0;
+            background: rgba(255,255,255,0.07); border: 2px dashed rgba(255,255,255,0.2);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.5rem; color: rgba(255,255,255,0.3);
+        }
+        .photo-upload-text { flex: 1; }
+        .photo-upload-text strong { display: block; font-size: 0.82rem; color: var(--accent); font-weight: 700; margin-bottom: 0.15rem; }
+        .photo-upload-text span { font-size: 0.7rem; color: rgba(255,255,255,0.35); }
+        .photo-upload-optional {
+            font-size: 0.62rem; background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.25);
+            color: var(--accent); padding: 0.15rem 0.5rem; border-radius: 100px; margin-left: 0.4rem;
+            vertical-align: middle; font-weight: 600; letter-spacing: 0.04em;
+        }
+        .photo-clear-btn {
+            background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); color: #f87171;
+            padding: 0.25rem 0.7rem; border-radius: 100px; font-size: 0.68rem; font-weight: 600;
+            cursor: pointer; font-family: 'Sora', sans-serif; display: none; margin-top: 0.3rem;
+            transition: all 0.15s;
+        }
+        .photo-clear-btn:hover { background: rgba(239,68,68,0.3); }
+
+        .rpt-photo-cell {
+            display: flex; align-items: center; justify-content: center;
+            padding: 6px 10px; border-right: none;
+        }
+        .rpt-passport-photo {
+            width: 72px; height: 90px; object-fit: cover; border-radius: 5px;
+            border: 2px solid #c7d8f0; display: block;
+        }
+        .rpt-passport-placeholder {
+            width: 72px; height: 90px; border-radius: 5px;
+            border: 2px dashed #c7d8f0; display: flex; align-items: center;
+            justify-content: center; font-size: 0.65rem; color: #94a3b8;
+            text-align: center; line-height: 1.3; padding: 4px;
+            background: #f8fafc;
+        }
+
         .sql-schema-hint{margin-top:.5rem;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.07);border-radius:.5rem;padding:.6rem .9rem;font-family:'JetBrains Mono',monospace;font-size:.7rem;color:rgba(255,255,255,.35);line-height:1.7}
         .sql-schema-hint strong{color:rgba(245,158,11,.8)}
         .log-edit-btn{background:rgba(26,74,138,.3);border:1px solid rgba(26,74,138,.5);color:#93c5fd;padding:.2rem .6rem;border-radius:100px;font-size:.68rem;font-weight:600;cursor:pointer;margin-left:.3rem;font-family:'Sora',sans-serif;transition:all .15s}
@@ -1167,7 +1250,6 @@
 </head>
 <body>
 
-<!-- ========== GLOBAL COLLEGE HEADER ========== -->
 <div id="globalCollegeHeader">
     <img id="gchLogo" src="srptc.png" alt="Sriram Polytechnic College" class="gch-logo"
          onerror="this.style.display='none'; document.getElementById('gchLogoFallback').style.display='flex';">
@@ -1178,7 +1260,6 @@
     </div>
 </div>
 
-<!-- ========== LANDING PAGE ========== -->
 <div id="landingPage">
     <div class="orb orb-1"></div>
     <div class="orb orb-2"></div>
@@ -1217,7 +1298,6 @@
     </div>
 </div>
 
-<!-- ========== MAIN APP ========== -->
 <div id="mainApp">
     <div class="app-header">
         <h1>📊 DOTE Diploma GPA &amp; CGPA Calculator</h1>
@@ -1230,16 +1310,25 @@
         <!-- LEFT: GPA Calculator -->
         <div class="card">
             <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;">
-                <h2>📖 Semester GPA Calculator</h2>
+                <div>
+                    <h2>📖 Semester GPA Calculator</h2>
+                    <div class="card-header-student-info" id="gpaCardStudentInfo">
+                        👤 <span class="chi-name" id="gpaCardName"></span> &nbsp;·&nbsp; 📜 <span class="chi-reg" id="gpaCardReg"></span>
+                    </div>
+                </div>
                 <span class="autosave-badge" id="autosaveBadge">✅ Draft Saved</span>
             </div>
             <div class="card-body">
                 <div id="studentBadge" class="student-badge" style="display:none;">
-                    <div class="info">
+                    <div class="info" style="display:flex;align-items:center;gap:0.6rem;">
+                        <div id="studentBadgePhoto" style="display:none;width:32px;height:40px;border-radius:3px;overflow:hidden;border:1.5px solid rgba(245,158,11,0.5);flex-shrink:0;">
+                            <img id="studentBadgePhotoImg" src="" alt="Photo" style="width:100%;height:100%;object-fit:cover;">
+                        </div>
                         👤 <span id="displayName"></span> &nbsp;·&nbsp; 📜 <span id="displayRegNo"></span>
                     </div>
-                    <div style="display:flex;gap:0.5rem;">
+                    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
                         <button class="btn-edit-student" id="editStudentBtn">✏️ Edit</button>
+                        <button class="btn-edit-student" id="uploadPhotoBtn" style="background:rgba(245,158,11,0.15);border-color:rgba(245,158,11,0.35);">📷 Photo</button>
                         <button class="btn-logout-student" id="logoutStudentBtn">🚪 Logout</button>
                     </div>
                 </div>
@@ -1308,6 +1397,9 @@
         <div class="card">
             <div class="card-header">
                 <h2>🎓 CGPA Calculator (Sem 1–6)</h2>
+                <div class="card-header-student-info" id="cgpaCardStudentInfo">
+                    👤 <span class="chi-name" id="cgpaCardName"></span> &nbsp;·&nbsp; 📜 <span class="chi-reg" id="cgpaCardReg"></span>
+                </div>
             </div>
             <div class="card-body">
                 <div style="background:rgba(255,255,255,0.04);border-radius:0.8rem;padding:0.8rem 1rem;margin-bottom:1rem;font-size:0.8rem;color:var(--muted);text-align:center;">
@@ -1361,10 +1453,8 @@
     </footer>
 </div>
 
-<!-- ========== PDF TOAST ========== -->
 <div id="pdfToast"></div>
 
-<!-- ========== PRINT OVERLAY ========== -->
 <div id="printOverlay">
     <div id="printPreviewBox">
         <div class="print-action-bar" style="flex-direction:column;gap:0.6rem;align-items:stretch;">
@@ -1387,12 +1477,10 @@
 </div>
 
 <script>
-// ============================================================
-// SECURITY SHIELD — Full Protection Suite
-// ============================================================
+
+
 (function() {
 
-    // ── 1. Right-click toast message ──────────────────────────
     function showSecurityToast(msg) {
         let toast = document.getElementById('__secToast');
         if (!toast) {
@@ -1424,67 +1512,56 @@
         }, 2800);
     }
 
-    // ── 2. Disable right-click ────────────────────────────────
     document.addEventListener('contextmenu', function(e) {
         e.preventDefault();
         showSecurityToast('Right-click is disabled on this page');
         return false;
     });
 
-    // ── 3. Block DevTools keyboard shortcuts ──────────────────
     document.addEventListener('keydown', function(e) {
         var tag = (document.activeElement || {}).tagName;
         var inField = (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT');
 
-        // F12
         if (e.key === 'F12') {
             e.preventDefault();
             showSecurityToast('Developer tools are disabled');
             return false;
         }
-        // Ctrl+Shift+I / Cmd+Opt+I
         if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'I' || e.key === 'i')) {
             e.preventDefault();
             showSecurityToast('Inspect element is disabled');
             return false;
         }
-        // Ctrl+Shift+J (Console)
         if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'J' || e.key === 'j')) {
             e.preventDefault();
             showSecurityToast('Developer console is disabled');
             return false;
         }
-        // Ctrl+Shift+C (Element picker)
         if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'C' || e.key === 'c')) {
             e.preventDefault();
             showSecurityToast('Inspect element is disabled');
             return false;
         }
-        // Ctrl+U (View Source)
         if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 'u' || e.key === 'U') && !inField) {
             e.preventDefault();
             showSecurityToast('View source is disabled on this page');
             return false;
         }
-        // Ctrl+S (Save page) — always block
         if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 's' || e.key === 'S')) {
             e.preventDefault();
             showSecurityToast('Saving this page is not permitted');
             return false;
         }
-        // Ctrl+A (Select all) — only block OUTSIDE input fields
         if ((e.ctrlKey || e.metaKey) && (e.key === 'a' || e.key === 'A') && !inField) {
             e.preventDefault();
             showSecurityToast('Text selection is restricted');
             return false;
         }
-        // Ctrl+C (Copy) — only block OUTSIDE input fields
         if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 'c' || e.key === 'C') && !inField) {
             e.preventDefault();
             showSecurityToast('Copying content is not permitted');
             return false;
         }
-        // Ctrl+P (Print) — always block, use in-app button
         if ((e.ctrlKey || e.metaKey) && (e.key === 'p' || e.key === 'P')) {
             e.preventDefault();
             showSecurityToast('Use the in-app Print / Save PDF button');
@@ -1492,8 +1569,6 @@
         }
     });
 
-    // ── 4. Disable text selection ONLY on non-interactive elements ──
-    // CRITICAL: Must allow INPUT, TEXTAREA, SELECT to work fully
     document.addEventListener('selectstart', function(e) {
         var el  = e.target;
         var tag = el ? el.tagName : '';
@@ -1503,7 +1578,6 @@
         return false;
     });
 
-    // ── 5. Disable drag on images only ────────────────────────
     document.addEventListener('dragstart', function(e) {
         if (e.target && e.target.tagName === 'IMG') {
             e.preventDefault();
@@ -1511,7 +1585,6 @@
         }
     });
 
-    // ── 6. Block copy outside input fields ────────────────────
     document.addEventListener('copy', function(e) {
         var tag = (document.activeElement || {}).tagName;
         if (tag === 'INPUT' || tag === 'TEXTAREA') return true;
@@ -1520,7 +1593,6 @@
         return false;
     });
 
-    // ── 7. DevTools open detection (size-change heuristic) ────
     (function devtoolsDetect() {
         var threshold = 160;
         var warned = false;
@@ -1535,7 +1607,6 @@
         }, 1000);
     })();
 
-    // ── 8. CSS: safe user-select — never blocks form elements ─
     var style = document.createElement('style');
     style.textContent =
         'body { -webkit-user-select:none; -moz-user-select:none; user-select:none; }' +
@@ -1561,9 +1632,7 @@
 
 })(); // end security shield
 
-// ============================================================
-// SUBJECT DATA
-// ============================================================
+
 const SEM1_COMMON = [["TAMILAR MARABU",2],["BASIC MATHEMATICS",4],["BASIC PHYSICS",3],["BASIC CHEMISTRY",3],["COMMUNICATIVE ENGLISH 1",2],["BASIC WORKSHOP PRACTISE",2],["DIGITAL WORKPLACE SKILLS",2],["Advanced Skill Certification - II",2]];
 const ECE_SUBJECTS = {2:[["TAMILS AND TECHNOLOGY",2],["BASICS OF ELECTRONICS AND COMMUNICATION ENGINEERING",3],["APPLIED MATHEMATICS - I",3],["APPLIED PHYSICS - I",2],["APPLIED CHEMISTRY - I",2],["BASIC ENGINEERING PRACTISE",2],["DRAFTING PRACTISE",2],["COMMUNICATIVE ENGLISH",2],["Advanced Skill Certification - II",2]],3:[["Electronic Devices and Circuits",4],["Digital Electronics",4],["Electronic Devices and Circuits (Lab)",2],["Digital Electronics (Lab)",2],["Linear Integrated Circuits",3],["Electrical Circuits & Machines",2],["Advanced Skill Certification - III",2]],4:[["Microcontroller",4],["Digital Communication",3],["Basics of Communication Engineering",3],["Measuring Instruments and Sensors",3],["Programming in C",3],["Microcontroller (Project)",2],["Advanced Skill Certification - 4",2]],5:[["Advanced Communication Systems",3],["Mobile Communication",3],["MEDICAL INSTRUMENTS",3],["Embedded Systems",4],["COMPUTER HARDWARE SERVICING",3],["Innovation & Startup",2],["Advanced Skill Certification - 5",2]],6:[["CONSUMER ELECTRONICS",3],["VLSI DESIGN",3],["Project / Internship",12]]};
 const MECH_SUBJECTS = {2:[["TAMILS AND TECHNOLOGY",2],["BASICS OF MECHANICAL ENGINEERING",3],["APPLIED MATHEMATICS - II",3],["APPLIED PHYSICS - II",2],["APPLIED CHEMISTRY - II",2],["BASIC ENGINEERING PRACTISE",2],["DRAFTING PRACTISE",2],["COMMUNICATIVE ENGLISH",2],["Advanced Skill Certification - II",2]],3:[["Manufacturing Process",3],["Strength of Materials",4],["Workshop Practices (Lab)",2],["Industrial Drives and Control",3],["Production Drawing and Modeling",3],["Machine Tool Technology",3],["Advanced Skill Certification - III",2]],4:[["Advanced Manufacturing Technology",3],["Fluid Mechanics",3],["Advanced Manufacturing Technology (Lab)",2],["Sensors and Actuators",3],["Heat Power Engineering",3],["Metrology and Measurements",3],["Advanced Skill Certification - 4",2]],5:[["Elements of Machine Design",3],["Industrial Engineering and Management",4],["Modern QC Tools",3],["Maintenance, Repairs & Service",3],["Automobile Technology",3],["Innovation & Startup",2],["Industrial Training",2],["Advanced Skill Certification - 5",2]],6:[["Power Plant Engineering",3],["Process Automation",3],["Project / Internship",12]]};
@@ -1578,9 +1647,176 @@ let studentLogs = [];
 let currentStudentName = "", currentStudentRegNo = "";
 let autosaveTimer = null;
 
-// ============================================================
-// HELPERS
-// ============================================================
+//   1. canvas.drawImage()  — works on http:// same-origin
+
+const FALLBACK_LOGO_SVG = 'data:image/png;base64,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';
+
+let LOGO_DATA_URL = '';
+
+(function loadCollegeLogo() {
+    function applyLogo(dataUrl) {
+        LOGO_DATA_URL = dataUrl;
+        document.querySelectorAll('img.rpt-logo-img, img.gch-logo, img.admin-college-logo').forEach(function(el) {
+            el.src = LOGO_DATA_URL;
+        });
+    }
+    // Use only the embedded logo — no external file loading needed
+    applyLogo(FALLBACK_LOGO_SVG);
+})();
+
+
+const SUPABASE_CONFIG_KEY = 'srptc_supabase_config';
+
+function getSupabaseConfig() {
+    try {
+        const raw = localStorage.getItem(SUPABASE_CONFIG_KEY);
+        return raw ? JSON.parse(raw) : { url: '', anonKey: '' };
+    } catch(e) { return { url: '', anonKey: '' }; }
+}
+
+function saveSupabaseConfig(url, anonKey) {
+    localStorage.setItem(SUPABASE_CONFIG_KEY, JSON.stringify({ url: url.trim(), anonKey: anonKey.trim() }));
+    _sbClient = null; // force reinit
+}
+
+let _sbClient = null;
+
+function getSupabaseClient() {
+    if (_sbClient) return _sbClient;
+    const cfg = getSupabaseConfig();
+    if (!cfg.url || !cfg.anonKey) return null;
+    try {
+        _sbClient = supabase.createClient(cfg.url, cfg.anonKey);
+        return _sbClient;
+    } catch(e) { return null; }
+}
+
+async function _sbPushLog(logEntry) {
+    const sb = getSupabaseClient();
+    if (!sb) return;
+    try {
+        await sb.from('student_logs').upsert({
+            id:        logEntry.id,
+            name:      logEntry.name,
+            reg_no:    logEntry.regNo,
+            action:    logEntry.action,
+            timestamp: logEntry.timestamp,
+            date:      logEntry.date
+        }, { onConflict: 'id' });
+    } catch(e) { /* silent — local log is always kept */ }
+}
+
+async function _sbPullAndMergeLogs(onDone) {
+    const sb = getSupabaseClient();
+    if (!sb) { if (onDone) onDone(false); return; }
+    try {
+        const { data, error } = await sb
+            .from('student_logs')
+            .select('*')
+            .order('id', { ascending: false })
+            .limit(2000);
+        if (error || !data || !data.length) { if (onDone) onDone(false); return; }
+
+        if (_sqlReady && _sqlDb) {
+            const stmt = _sqlDb.prepare(
+                "INSERT OR IGNORE INTO logs(id,name,regNo,action,timestamp,date) VALUES(?,?,?,?,?,?)"
+            );
+            data.forEach(function(r) {
+                stmt.run([r.id, r.name, r.reg_no, r.action, r.timestamp, r.date]);
+            });
+            stmt.free();
+            _dbPersist();
+            _dbSyncArray();
+        }
+        if (onDone) onDone(true);
+    } catch(e) { if (onDone) onDone(false); }
+}
+
+let _sbSyncStatus = 'idle'; // 'idle' | 'syncing' | 'ok' | 'error' | 'not_configured'
+
+function _setSbStatus(s) {
+    _sbSyncStatus = s;
+    const el = document.getElementById('sbSyncBadge');
+    if (!el) return;
+    const map = {
+        idle:           ['⏸ Not synced',  'rgba(255,255,255,0.15)', 'rgba(255,255,255,0.4)'],
+        syncing:        ['⟳ Syncing…',    'rgba(245,158,11,0.2)',  '#fbbf24'],
+        ok:             ['✓ Synced',       'rgba(16,185,129,0.2)',  '#34d399'],
+        error:          ['✗ Sync failed',  'rgba(239,68,68,0.2)',   '#f87171'],
+        not_configured: ['⚙ Not configured','rgba(255,255,255,0.06)','rgba(255,255,255,0.3)']
+    };
+    const [label, bg, color] = map[s] || map.idle;
+    el.textContent = label;
+    el.style.background = bg;
+    el.style.color = color;
+}
+
+
+function _photoKey(regNo) {
+    return 'photo_' + (regNo || '').trim().toLowerCase().replace(/\s+/g, '_');
+}
+
+function getStudentPhoto(regNo) {
+    if (!regNo) return null;
+    return localStorage.getItem(_photoKey(regNo)) || null;
+}
+
+function saveStudentPhoto(regNo, dataUrl) {
+    if (!regNo || !dataUrl) return;
+    localStorage.setItem(_photoKey(regNo), dataUrl);
+    _sbPushPhoto(regNo, dataUrl);
+}
+
+function removeStudentPhoto(regNo) {
+    if (!regNo) return;
+    localStorage.removeItem(_photoKey(regNo));
+}
+
+async function _sbPushPhoto(regNo, dataUrl) {
+    const sb = getSupabaseClient();
+    if (!sb) return;
+    try {
+        await sb.from('student_photos').upsert({
+            reg_no:   regNo.trim(),
+            photo:    dataUrl,
+            updated_at: new Date().toISOString()
+        }, { onConflict: 'reg_no' });
+    } catch(e) { /* silent — local photo is always kept */ }
+}
+
+async function _sbPullPhoto(regNo) {
+    const sb = getSupabaseClient();
+    if (!sb || !regNo) return;
+    try {
+        const { data, error } = await sb
+            .from('student_photos')
+            .select('photo')
+            .eq('reg_no', regNo.trim())
+            .single();
+        if (!error && data && data.photo) {
+            localStorage.setItem(_photoKey(regNo), data.photo);
+        }
+    } catch(e) {}
+}
+
+async function _sbPullAllPhotos() {
+    const sb = getSupabaseClient();
+    if (!sb) return;
+    try {
+        const { data, error } = await sb
+            .from('student_photos')
+            .select('reg_no, photo')
+            .order('reg_no', { ascending: true });
+        if (error || !data || !data.length) return;
+        data.forEach(function(row) {
+            if (row.reg_no && row.photo) {
+                localStorage.setItem(_photoKey(row.reg_no), row.photo);
+            }
+        });
+    } catch(e) { /* silent — photos will be missing but reports still render */ }
+}
+
+
 function escapeHtml(str) {
     return (str || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 }
@@ -1612,13 +1848,8 @@ function isAdvancedSkillCertification(name) {
     return /advanced skill(s)? certification/i.test(name);
 }
 
-// ============================================================
-// STUDENT DRAFT KEY — unique per student (name + regNo)
-// Key format: draft_REGNO
-// Stores: { grades: { "DEPT_SEM_IDX": "grade" }, gpas: { 1: 7.5, ... }, dept: "ECE", sem: "3" }
-// ============================================================
+
 function draftKey() {
-    // Normalize reg no: lowercase, remove spaces
     const reg = currentStudentRegNo.trim().toLowerCase().replace(/\s+/g, '_');
     return `draft_${reg}`;
 }
@@ -1634,7 +1865,6 @@ function saveDraft(extra) {
     if (!currentStudentRegNo) return;
     const existing = loadDraft() || {};
 
-    // Collect current grade selections
     const grades = existing.grades || {};
     const dept   = document.getElementById('deptSelect').value;
     const sem    = document.getElementById('semSelect').value;
@@ -1643,7 +1873,6 @@ function saveDraft(extra) {
         if (gs) grades[`${dept}_${sem}_${idx}`] = gs.value;
     });
 
-    // Collect current GPA values
     const gpas = {};
     for (let i = 1; i <= 6; i++) {
         const v = parseFloat(document.getElementById(`sem${i}Gpa`).value);
@@ -1663,7 +1892,6 @@ function saveDraft(extra) {
     flashAutosave();
 }
 
-// Debounced auto-save: saves 800ms after last change
 function scheduleDraftSave() {
     clearTimeout(autosaveTimer);
     autosaveTimer = setTimeout(() => saveDraft({}), 800);
@@ -1702,7 +1930,6 @@ function restoreDraftGPAs() {
     const draft = loadDraft();
     if (!draft) return;
 
-    // Restore semester GPAs
     if (draft.gpas) {
         for (let i = 1; i <= 6; i++) {
             const inp = document.getElementById(`sem${i}Gpa`);
@@ -1714,24 +1941,15 @@ function restoreDraftGPAs() {
         }
     }
 
-    // Restore dept/sem selection
     if (draft.dept) document.getElementById('deptSelect').value = draft.dept;
     if (draft.sem)  document.getElementById('semSelect').value  = draft.sem;
 }
 
-// ============================================================
-// SQL-POWERED LOGS  (sql.js — SQLite compiled to WebAssembly)
-// Schema: logs(id,name,regNo,action,timestamp,date)
-//   id        = Date.now() — unique integer primary key
-//   action    = 'login' | 'logout' | 'updated'
-//   timestamp = human-readable locale string
-//   date      = ISO 8601 string
-// ============================================================
+
 let _sqlDb     = null;
 let _sqlReady  = false;
 const SQL_STORE_KEY = 'srptc_sqlLogsDb_v1';
 
-// Load / create the SQLite database
 function _initSqlDbSync(SQL) {
     const saved = localStorage.getItem(SQL_STORE_KEY);
     if (saved) {
@@ -1753,7 +1971,6 @@ function _initSqlDbSync(SQL) {
         ");"
     ].join(" "));
 
-    // One-time migration of existing JSON logs
     if (!localStorage.getItem('srptc_sqlMigrated')) {
         var raw = localStorage.getItem('studentEntryLogs');
         if (raw) {
@@ -1812,7 +2029,6 @@ function _dbSyncArray() {
     } catch(e) {}
 }
 
-// Public: run arbitrary SQL — returns {columns,rows} or {error,affected}
 function runSql(sql) {
     if (!_sqlReady || !_sqlDb) return { error: 'SQLite not ready yet — please wait a moment.' };
     try {
@@ -1837,148 +2053,35 @@ function saveStudentLogs() {
     _dbPersist();
 }
 
-/* ====================================================
-   CLOUD SYNC — JSONBin.io (auto-setup, zero config)
-   On first admin login a shared bin is created and its
-   ID stored in localStorage. To sync a second device:
-   Admin → Profile → Cloud Sync → copy & paste the Bin ID.
-   All log writes/reads go through this single shared bin.
-   ==================================================== */
-var _cloudSyncBusy = false;
-// Two working API keys — fallback if one hits quota
-var _JBIN_KEYS = [
-    '$2a$10$mXq8nJqY3kWvZpL5rTdOuO4VbK1FhNwX9sY2iA7gRpM6cEQjHv8Wy',
-    '$2a$10$abc123placeholder456def789ghi000jkl111mno222pqr333stu4'
-];
-var _cloudBinId  = localStorage.getItem('srptc_cloud_binId') || '';
-var JSONBIN_BASE = 'https://api.jsonbin.io/v3';
-
-function _jbHeaders() {
-    return { 'Content-Type': 'application/json', 'X-Master-Key': _JBIN_KEYS[0] };
-}
-
-function _logsSnap() {
-    return (studentLogs || []).slice(0, 800).map(function(l) {
-        return { id:l.id, name:l.name, regNo:l.regNo,
-                 action:l.action, timestamp:l.timestamp, date:l.date };
-    });
-}
-
-async function _cloudCreateBin() {
-    try {
-        var r = await fetch(JSONBIN_BASE + '/b', {
-            method : 'POST',
-            headers: Object.assign({}, _jbHeaders(), {
-                'X-Bin-Name'   : 'SRPTC-Logs-' + Date.now(),
-                'X-Bin-Private': 'false'
-            }),
-            body: JSON.stringify({ logs: [] })
-        });
-        if (!r.ok) { console.warn('[JSONBin] create HTTP', r.status); return false; }
-        var j = await r.json();
-        var id = j.metadata && j.metadata.id;
-        if (id) { _cloudBinId = id; localStorage.setItem('srptc_cloud_binId', id); return true; }
-    } catch(e) { console.warn('[JSONBin] create error:', e); }
-    return false;
-}
-
-// Push full log array to the bin (overwrite)
-async function _cloudPushLogs() {
-    if (!_cloudBinId) { await _cloudCreateBin(); if (!_cloudBinId) return; }
-    try {
-        var r = await fetch(JSONBIN_BASE + '/b/' + _cloudBinId, {
-            method : 'PUT',
-            headers: _jbHeaders(),
-            body   : JSON.stringify({ logs: _logsSnap() })
-        });
-        if (!r.ok) console.warn('[JSONBin] push HTTP', r.status);
-    } catch(e) { console.warn('[JSONBin] push error:', e); }
-}
-
-// Pull logs from bin and merge into local SQLite
-async function _cloudPullLogs(cb) {
-    _cloudSyncBusy = true;
-    var bid = _cloudBinId || localStorage.getItem('srptc_cloud_binId') || '';
-
-    // No bin yet → try to create one silently
-    if (!bid) {
-        var created = await _cloudCreateBin();
-        if (!created) { _cloudSyncBusy = false; if (cb) cb(false, 0); return; }
-        bid = _cloudBinId;
-    }
-
-    try {
-        var r = await fetch(JSONBIN_BASE + '/b/' + bid + '/latest', {
-            headers: { 'X-Master-Key': _JBIN_KEYS[0] }
-        });
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        var j   = await r.json();
-        var rem = (j.record && Array.isArray(j.record.logs)) ? j.record.logs : [];
-
-        if (rem.length) {
-            await _ensureSqlReady();
-            if (_sqlReady && _sqlDb) {
-                var st = _sqlDb.prepare(
-                    'INSERT OR IGNORE INTO logs(id,name,regNo,action,timestamp,date) VALUES(?,?,?,?,?,?)'
-                );
-                rem.forEach(function(l) {
-                    try { st.run([l.id, l.name, l.regNo, l.action || 'login', l.timestamp, l.date || '']); } catch(e) {}
-                });
-                st.free();
-                _dbPersist();
-                _dbSyncArray();
-            }
-        }
-        _cloudSyncBusy = false;
-        if (cb) cb(true, rem.length);
-    } catch(e) {
-        console.warn('[JSONBin] pull error:', e);
-        _cloudSyncBusy = false;
-        if (cb) cb(false, 0);
-    }
-}
-
-// Delete a log by rebuilding the bin without that entry
-async function _cloudDeleteLog(logId) {
-    // After local delete, push updated array to bin
-    setTimeout(function() { _cloudPushLogs(); }, 300);
-}
-
-// Clear all logs from the bin
-async function _cloudClearAllLogs() {
-    if (!_cloudBinId) return;
-    try {
-        await fetch(JSONBIN_BASE + '/b/' + _cloudBinId, {
-            method : 'PUT',
-            headers: _jbHeaders(),
-            body   : JSON.stringify({ logs: [] })
-        });
-    } catch(e) { console.warn('[JSONBin] clear error:', e); }
-}
-
 function addStudentLog(name, regNo, action) {
-    if (!name || !regNo) return;
-    var now = new Date();
-    var ts  = now.toLocaleString('en-IN', { day:'2-digit', month:'short', year:'numeric',
-                                            hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:true });
-    var iso = now.toISOString();
-    var id  = now.getTime();
-    function _ins() {
-        if (!_sqlReady || !_sqlDb) return;
+    const now = new Date();
+    const entry = {
+        id:        Date.now(),
+        name:      name,
+        regNo:     regNo,
+        action:    action || 'login',
+        timestamp: now.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }),
+        date:      now.toISOString()
+    };
+
+    if (_sqlReady && _sqlDb) {
         try {
-            var st = _sqlDb.prepare('INSERT OR IGNORE INTO logs(id,name,regNo,action,timestamp,date) VALUES(?,?,?,?,?,?)');
-            st.run([id, name, regNo, action, ts, iso]);
-            st.free(); _dbPersist(); _dbSyncArray();
-            _cloudPushLogs(); // sync to cloud
-        } catch(e) { console.error('[Log]:', e); }
+            _sqlDb.run(
+                "INSERT OR IGNORE INTO logs(id,name,regNo,action,timestamp,date) VALUES(?,?,?,?,?,?)",
+                [entry.id, entry.name, entry.regNo, entry.action, entry.timestamp, entry.date]
+            );
+            _dbPersist();
+            _dbSyncArray();
+        } catch(e) {}
+    } else {
+        studentLogs.unshift(entry);
+        try { localStorage.setItem('studentEntryLogs', JSON.stringify(studentLogs.slice(0, 500))); } catch(e) {}
     }
-    if (_sqlReady) { _ins(); }
-    else { _ensureSqlReady().then(function(ok) { if (ok) _ins(); }); }
+
+    _sbPushLog(entry);
 }
 
-// ============================================================
-// MODAL FACTORY
-// ============================================================
+
 function createModal({ icon, title, subtitle, fields, primaryBtn, primaryBtnClass, onSubmit, showClose = true, showCancel = false, onCancel = null }) {
     const uid = '_' + Math.random().toString(36).slice(2, 8);
     const overlay = document.createElement('div');
@@ -2033,17 +2136,13 @@ function createModal({ icon, title, subtitle, fields, primaryBtn, primaryBtnClas
     return overlay;
 }
 
-// ============================================================
-// LANDING PAGE
-// ============================================================
+
 function initLanding() {
     document.getElementById('landingStudentBtn').onclick = () => showStudentModal();
     document.getElementById('landingAdminBtn').onclick   = () => showAdminLoginModal();
 }
 
-// ============================================================
-// STUDENT LOGIN MODAL
-// ============================================================
+
 function showStudentModal(prefill = {}) {
     const modal = createModal({
         icon: '🎓',
@@ -2052,7 +2151,6 @@ function showStudentModal(prefill = {}) {
         showClose: !!(prefill.name),
         showCancel: !(prefill.name),
         onCancel: () => {
-            // If cancelling from fresh login, just leave the landing page visible
             document.getElementById('landingPage').style.display = 'flex';
         },
         fields: [
@@ -2074,11 +2172,17 @@ function showStudentModal(prefill = {}) {
             localStorage.setItem('studentRegNo', reg);
             addStudentLog(name, reg, prefill.name ? 'updated' : 'login');
 
+            _sbPullPhoto(reg).then(() => updateStudentDisplay());
+
+            const zone = overlay.querySelector('#modalPhotoZone');
+            if (zone && zone.dataset.photoData) {
+                saveStudentPhoto(reg, zone.dataset.photoData);
+            }
+
             updateStudentDisplay();
             document.getElementById('landingPage').style.display = 'none';
             document.getElementById('mainApp').style.display     = 'block';
 
-            // Restore their draft (dept, sem, grades, GPAs)
             restoreDraftGPAs();
             renderSubjects();           // renders & then restoreGrades is called inside
             updateSemesterCreditsDisplay();
@@ -2092,8 +2196,6 @@ function showStudentModal(prefill = {}) {
         }
     });
 
-    // Check if there's a saved draft for a user who typed a reg no
-    // Show a hint after reg no blur
     setTimeout(() => {
         const regInput = modal.querySelector('[data-fid="inputReg"]');
         if (regInput) {
@@ -2114,36 +2216,205 @@ function showStudentModal(prefill = {}) {
                 }
             });
         }
+
+        const box = modal.querySelector('.modal-box');
+        const submitBtn = modal.querySelector('[id^="mSubmit"]');
+        if (box && submitBtn) {
+            const photoZone = document.createElement('div');
+            photoZone.innerHTML = `
+                <div style="margin-bottom:0.8rem;">
+                    <label class="field-label">Passport Size Photo <span class="photo-upload-optional">OPTIONAL</span></label>
+                    <div class="photo-upload-zone" id="modalPhotoZone" title="Click to upload passport photo">
+                        <div class="photo-upload-placeholder" id="modalPhotoPlaceholder">📷</div>
+                        <img class="photo-preview-thumb" id="modalPhotoThumb" src="" alt="Photo preview">
+                        <div class="photo-upload-text">
+                            <strong>Upload Passport Size Photo</strong>
+                            <span>JPG/PNG · Max 500KB · 3.5×4.5 cm format<br>Appears on reports &amp; mark sheets</span>
+                            <button class="photo-clear-btn" id="modalPhotoClearBtn" onclick="event.stopPropagation()">✕ Remove</button>
+                        </div>
+                    </div>
+                    <input type="file" id="modalPhotoInput" accept="image/jpeg,image/png,image/webp" style="display:none;">
+                </div>`;
+            box.insertBefore(photoZone, submitBtn);
+
+            const zone      = box.querySelector('#modalPhotoZone');
+            const thumb     = box.querySelector('#modalPhotoThumb');
+            const placeholder = box.querySelector('#modalPhotoPlaceholder');
+            const clearBtn  = box.querySelector('#modalPhotoClearBtn');
+            const fileInput = box.querySelector('#modalPhotoInput');
+
+            const prefillReg = (prefill.reg || '').trim();
+            if (prefillReg) {
+                const stored = getStudentPhoto(prefillReg);
+                if (stored) { _applyModalPhoto(stored, thumb, placeholder, clearBtn); }
+            }
+
+            zone.addEventListener('click', () => fileInput.click());
+            clearBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                thumb.src = ''; thumb.style.display = 'none';
+                placeholder.style.display = 'flex';
+                clearBtn.style.display = 'none';
+                fileInput.value = '';
+                zone.dataset.photoData = '';
+            });
+            fileInput.addEventListener('change', () => {
+                const file = fileInput.files[0];
+                if (!file) return;
+                if (file.size > 600 * 1024) {
+                    alert('Photo too large (max 500 KB). Please compress or crop your image.');
+                    fileInput.value = '';
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    const dataUrl = ev.target.result;
+                    _applyModalPhoto(dataUrl, thumb, placeholder, clearBtn);
+                    zone.dataset.photoData = dataUrl;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
     }, 100);
+
 }
 
-// ============================================================
-// STUDENT DISPLAY
-// ============================================================
+function _applyModalPhoto(dataUrl, thumb, placeholder, clearBtn) {
+    thumb.src = dataUrl;
+    thumb.style.display = 'block';
+    placeholder.style.display = 'none';
+    clearBtn.style.display = 'inline-block';
+}
+
+
+function showPhotoUploadModal() {
+    if (!currentStudentRegNo) return;
+    const existing = getStudentPhoto(currentStudentRegNo);
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `
+        <div class="modal-box" style="max-width:380px;">
+            <button class="modal-close" id="photoModalClose">&#10005;</button>
+            <span class="modal-icon">📷</span>
+            <div class="modal-title">Passport Size Photo</div>
+            <div class="modal-subtitle" style="margin-bottom:1.2rem;">
+                Optional · Shown on Academic Report &amp; Mark Sheet
+            </div>
+            <div style="display:flex;justify-content:center;margin-bottom:1.2rem;">
+                ${existing
+                    ? `<img id="photoModalPreview" src="${existing}" alt="Current photo"
+                        style="width:80px;height:100px;object-fit:cover;border-radius:6px;
+                        border:2.5px solid rgba(245,158,11,0.6);display:block;">`
+                    : `<div id="photoModalPlaceholder"
+                        style="width:80px;height:100px;border-radius:6px;
+                        border:2px dashed rgba(255,255,255,0.2);display:flex;align-items:center;
+                        justify-content:center;font-size:2.5rem;color:rgba(255,255,255,0.25);
+                        background:rgba(255,255,255,0.04);">📷</div>`}
+            </div>
+            <input type="file" id="photoModalFileInput" accept="image/jpeg,image/png,image/webp" style="display:none;">
+            <button class="modal-btn modal-btn-primary" id="photoModalUploadBtn">📁 Choose Photo</button>
+            ${existing ? `<button class="modal-btn" id="photoModalRemoveBtn"
+                style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);
+                color:#f87171;margin-top:0.5rem;">🗑️ Remove Photo</button>` : ''}
+            <div class="error-msg" id="photoModalErr" style="display:none;"></div>
+        </div>`;
+    document.body.appendChild(overlay);
+
+    const fileInput = overlay.querySelector('#photoModalFileInput');
+
+    overlay.querySelector('#photoModalClose').onclick  = () => overlay.remove();
+    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+
+    overlay.querySelector('#photoModalUploadBtn').onclick = () => fileInput.click();
+
+    fileInput.onchange = () => {
+        const file = fileInput.files[0];
+        if (!file) return;
+        if (file.size > 600 * 1024) {
+            const errEl = overlay.querySelector('#photoModalErr');
+            errEl.textContent = '⚠️ Photo too large (max 500 KB). Please compress or crop.';
+            errEl.style.display = 'block';
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            const dataUrl = ev.target.result;
+            saveStudentPhoto(currentStudentRegNo, dataUrl);
+            updateStudentDisplay();
+            let preview = overlay.querySelector('#photoModalPreview');
+            const placeholder = overlay.querySelector('#photoModalPlaceholder');
+            if (!preview) {
+                preview = document.createElement('img');
+                preview.id = 'photoModalPreview';
+                preview.alt = 'Photo';
+                preview.style.cssText = 'width:80px;height:100px;object-fit:cover;border-radius:6px;border:2.5px solid rgba(245,158,11,0.6);display:block;';
+                if (placeholder) placeholder.replaceWith(preview);
+            }
+            preview.src = dataUrl;
+            const errEl = overlay.querySelector('#photoModalErr');
+            errEl.textContent = '✅ Photo saved successfully!';
+            errEl.style.cssText = 'display:block;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);color:#34d399;';
+            setTimeout(() => overlay.remove(), 1200);
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const removeBtn = overlay.querySelector('#photoModalRemoveBtn');
+    if (removeBtn) {
+        removeBtn.onclick = () => {
+            if (!confirm('Remove your passport photo?')) return;
+            removeStudentPhoto(currentStudentRegNo);
+            updateStudentDisplay();
+            overlay.remove();
+        };
+    }
+}
+
+
 function updateStudentDisplay() {
     const badge = document.getElementById('studentBadge');
+    const gpaInfo  = document.getElementById('gpaCardStudentInfo');
+    const cgpaInfo = document.getElementById('cgpaCardStudentInfo');
     if (currentStudentName && currentStudentRegNo) {
         badge.style.display = 'flex';
         document.getElementById('displayName').textContent  = currentStudentName;
         document.getElementById('displayRegNo').textContent = currentStudentRegNo;
+        if (gpaInfo) {
+            document.getElementById('gpaCardName').textContent = currentStudentName;
+            document.getElementById('gpaCardReg').textContent  = currentStudentRegNo;
+            gpaInfo.style.display = 'block';
+        }
+        if (cgpaInfo) {
+            document.getElementById('cgpaCardName').textContent = currentStudentName;
+            document.getElementById('cgpaCardReg').textContent  = currentStudentRegNo;
+            cgpaInfo.style.display = 'block';
+        }
+        const photo    = getStudentPhoto(currentStudentRegNo);
+        const photoWrap = document.getElementById('studentBadgePhoto');
+        const photoImg  = document.getElementById('studentBadgePhotoImg');
+        if (photo && photoWrap && photoImg) {
+            photoImg.src = photo;
+            photoWrap.style.display = 'block';
+        } else if (photoWrap) {
+            photoWrap.style.display = 'none';
+        }
     } else {
         badge.style.display = 'none';
+        if (gpaInfo)  gpaInfo.style.display  = 'none';
+        if (cgpaInfo) cgpaInfo.style.display = 'none';
     }
 }
 
-// ============================================================
-// STUDENT LOGOUT
-// ============================================================
+
 function logoutStudent() {
     if (!confirm(`Logout as ${currentStudentName}?\n\nYour draft will be saved and restored when you log in again with the same register number.`)) return;
     addStudentLog(currentStudentName, currentStudentRegNo, 'logout');
 
-    // Save final draft before logout
     saveDraft({});
 
     localStorage.removeItem('studentName');
     localStorage.removeItem('studentRegNo');
-    // NOTE: We do NOT delete the draft key — it will be restored on next login
 
     currentStudentName  = '';
     currentStudentRegNo = '';
@@ -2165,10 +2436,7 @@ function logoutStudent() {
     document.getElementById('landingPage').style.display = 'flex';
 }
 
-// ============================================================
-// ADMIN BRUTE-FORCE PROTECTION
-// Keys: admin_failCount, admin_lockedUntil, admin_secretKey
-// ============================================================
+
 const ADMIN_MAX_ATTEMPTS  = 3;
 const ADMIN_LOCKOUT_MS    = 15 * 60 * 1000; // 15 minutes
 const ADMIN_SECRET_DEFAULT = 'SRPTC@2024';   // changeable via profile
@@ -2186,7 +2454,6 @@ function incrementAdminFail() {
     return c;
 }
 
-// ── Generate & download the Python email-alert script ────────
 function downloadAlertScript(attemptTime, failedUser) {
     const py = `#!/usr/bin/env python3
 # ================================================================
@@ -2281,7 +2548,6 @@ if __name__ == "__main__":
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
 
-// ── Countdown timer helper ────────────────────────────────────
 function formatCountdown(ms) {
     if (ms <= 0) return '0:00';
     const m = Math.floor(ms / 60000);
@@ -2289,7 +2555,6 @@ function formatCountdown(ms) {
     return `${m}:${s.toString().padStart(2,'0')}`;
 }
 
-// ── Secret Key unlock modal ───────────────────────────────────
 function showSecretKeyModal(onUnlocked) {
     const uid = '_sk' + Math.random().toString(36).slice(2,8);
     const overlay = document.createElement('div');
@@ -2323,7 +2588,6 @@ function showSecretKeyModal(onUnlocked) {
     </div>`;
     document.body.appendChild(overlay);
 
-    // Countdown timer
     const cdEl = overlay.querySelector(`#lockCountdown${uid}`);
     const cdInterval = setInterval(() => {
         const remaining = getAdminLockedUntil() - Date.now();
@@ -2358,17 +2622,13 @@ function showSecretKeyModal(onUnlocked) {
         clearInterval(cdInterval);
         overlay.remove();
     };
-    // Allow Enter key
     overlay.querySelector(`#secretKeyInput${uid}`).addEventListener('keydown', e => {
         if (e.key === 'Enter') overlay.querySelector(`#skSubmit${uid}`).click();
     });
 }
 
-// ============================================================
-// ADMIN LOGIN MODAL
-// ============================================================
+
 function showAdminLoginModal() {
-    // ── Check if locked ───────────────────────────────────────
     if (isAdminLocked()) {
         showSecretKeyModal(() => showAdminLoginModal());
         return;
@@ -2433,11 +2693,9 @@ function showAdminLoginModal() {
         } else {
             const count = incrementAdminFail();
             if (count >= ADMIN_MAX_ATTEMPTS) {
-                // Download alert script automatically
                 const attemptTime = new Date().toLocaleString();
                 downloadAlertScript(attemptTime, user);
                 overlay.remove();
-                // Small delay so download triggers before modal opens
                 setTimeout(() => showSecretKeyModal(() => showAdminLoginModal()), 300);
             } else {
                 const left = ADMIN_MAX_ATTEMPTS - count;
@@ -2448,22 +2706,19 @@ function showAdminLoginModal() {
 
     overlay.querySelector(`#admCancel${uid}`).onclick = () => overlay.remove();
 
-    // Allow Enter key on password field
     overlay.querySelector(`#adminPass${uid}`).addEventListener('keydown', e => {
         if (e.key === 'Enter') overlay.querySelector(`#admSubmit${uid}`).click();
     });
 }
 
-// ============================================================
-// ADMIN DASHBOARD
-// ============================================================
+
 function showAdminDashboard() {
     document.getElementById('globalCollegeHeader').style.display = 'none';
     const overlay = document.createElement('div');
     overlay.className = 'admin-overlay';
     overlay.innerHTML = `
         <div class="admin-college-header">
-            <img src="srptc.png" alt="Sriram Polytechnic College" class="admin-college-logo"
+            <img src="${LOGO_DATA_URL || 'srptc.png'}" alt="Sriram Polytechnic College" class="admin-college-logo"
                  onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
             <div class="admin-college-logo-fallback" style="display:none;">🏛️</div>
             <div class="admin-college-text">
@@ -2548,10 +2803,10 @@ function showAdminDashboard() {
                 <div class="section-hdr" style="flex-wrap:wrap;gap:.6rem;">
                     <h3>📋 Entry &amp; Exit Logs</h3>
                     <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;">
+                        <span id="sbSyncBadge" style="display:inline-flex;align-items:center;gap:.35rem;padding:.28rem .8rem;border-radius:100px;font-size:.72rem;font-weight:700;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.3);transition:all .3s;">⚙ Not configured</span>
+                        <button class="logs-view-btn" id="sbSyncNowBtn" title="Sync logs with Supabase">☁ Sync Now</button>
                         <button class="logs-view-btn active" id="logsViewTableBtn">📊 Table View</button>
                         <button class="logs-view-btn" id="logsViewSqlBtn">🖥️ SQL Editor</button>
-                        <button id="logsRefreshBtn" style="display:inline-flex;align-items:center;gap:0.4rem;padding:0.42rem 1.1rem;border:none;border-radius:100px;background:linear-gradient(135deg,#0ea5e9,#0284c7);color:white;font-family:'Sora',sans-serif;font-weight:700;font-size:0.8rem;cursor:pointer;box-shadow:0 3px 12px rgba(14,165,233,0.4);">🔄 Refresh</button>
-                        <span id="logsSyncStatus" style="font-size:0.71rem;color:rgba(255,255,255,0.4);font-family:'JetBrains Mono',monospace;min-width:160px;"></span>
                         <button class="small-danger-btn" id="clearLogsBtn">🗑️ Clear All Logs</button>
                     </div>
                 </div>
@@ -2691,25 +2946,48 @@ function showAdminDashboard() {
                         Current username: <strong id="profileDisplayUser" style="color:rgba(255,255,255,0.65);font-family:'JetBrains Mono',monospace;"></strong>
                     </p>
                 </div>
-                <div class="admin-section" style="margin-top:0;border:1px solid rgba(52,211,153,0.25);background:rgba(52,211,153,0.04);">
-                    <h3 style="color:#34d399;">☁️ Cross-Device Log Sync</h3>
-                    <p style="font-size:0.78rem;color:rgba(255,255,255,0.5);line-height:1.8;margin-bottom:0.8rem;">
-                        Logs sync across all devices via JSONBin cloud.<br>
-                        <strong style="color:#fbbf24;">Device 1 (this one):</strong> A Bin ID is auto-created on first admin login.<br>
-                        <strong style="color:#38bdf8;">Other devices:</strong> Paste that Bin ID below → Save → Logs → 🔄 Refresh.
+                <div class="admin-section" style="margin-top:0;border:1px solid rgba(99,179,237,0.25);background:rgba(99,179,237,0.04);">
+                    <h3 style="color:#63b3ed;">☁️ Supabase Sync — Cross-Device Logs</h3>
+                    <p style="font-size:0.78rem;color:rgba(255,255,255,0.35);margin-bottom:1.2rem;line-height:1.7;">
+                        Connect to a Supabase project so logs sync across all devices when admin logs in.
+                        Get your URL and anon key from your Supabase project → Settings → API.<br>
+                        <span style="color:rgba(245,158,11,0.7);">Required SQL in your Supabase project:</span>
+                        <code style="display:block;margin-top:.5rem;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);border-radius:.5rem;padding:.7rem .9rem;font-family:'JetBrains Mono',monospace;font-size:.7rem;color:#a5f3fc;line-height:1.7;white-space:pre-wrap;">CREATE TABLE student_logs (
+  id         BIGINT PRIMARY KEY,
+  name       TEXT NOT NULL,
+  reg_no     TEXT NOT NULL,
+  action     TEXT NOT NULL DEFAULT 'login',
+  timestamp  TEXT NOT NULL,
+  date       TEXT NOT NULL
+);
+ALTER TABLE student_logs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "allow_all" ON student_logs
+  FOR ALL USING (true) WITH CHECK (true);
+
+-- Passport photo storage (optional)
+CREATE TABLE student_photos (
+  reg_no     TEXT PRIMARY KEY,
+  photo      TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+ALTER TABLE student_photos ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "allow_all" ON student_photos
+  FOR ALL USING (true) WITH CHECK (true);</code>
                     </p>
-                    <p style="font-size:0.74rem;font-weight:700;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.4rem;">Your Cloud Bin ID</p>
-                    <div style="display:flex;gap:0.5rem;align-items:center;margin-bottom:0.7rem;">
-                        <input class="field-input" id="profileBinIdInput" type="text"
-                            placeholder="Auto-created on first login — appears here"
-                            style="flex:1;font-family:'JetBrains Mono',monospace;font-size:0.82rem;">
-                        <button class="admin-btn admin-btn-primary" id="saveBinIdBtn" style="white-space:nowrap;">💾 Save</button>
-                        <button class="admin-btn" id="copyBinIdBtn" style="white-space:nowrap;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:white;">📋 Copy</button>
+                    <div class="field-group" style="margin-bottom:1rem;">
+                        <label class="field-label" style="display:block;font-size:0.72rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:rgba(255,255,255,0.45);margin-bottom:0.45rem;">Supabase Project URL</label>
+                        <input class="field-input" id="sbUrlInput" type="text" placeholder="https://xxxxxxxxxxxx.supabase.co" autocomplete="off" spellcheck="false">
                     </div>
-                    <div id="profileBinMsg" style="display:none;border-radius:0.6rem;padding:0.5rem 0.9rem;font-size:0.8rem;margin-bottom:0.5rem;"></div>
-                    <button class="admin-btn admin-btn-primary" id="fbTestSyncBtn" style="font-size:0.8rem;padding:0.5rem 1rem;margin-top:0.3rem;">🔄 Test Cloud Sync</button>
-                    <div id="fbTestSyncMsg" style="display:none;margin-top:0.6rem;border-radius:0.6rem;padding:0.5rem 0.9rem;font-size:0.8rem;"></div>
-                    <p style="font-size:0.68rem;color:rgba(255,255,255,0.2);margin-top:0.7rem;">⚠️ Bin is publicly readable — only student names &amp; reg numbers are stored.</p>
+                    <div class="field-group" style="margin-bottom:1rem;">
+                        <label class="field-label" style="display:block;font-size:0.72rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:rgba(255,255,255,0.45);margin-bottom:0.45rem;">Supabase Anon Key</label>
+                        <input class="field-input" id="sbAnonKeyInput" type="password" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." autocomplete="off" spellcheck="false">
+                    </div>
+                    <div id="sbConfigMsg" style="display:none;border-radius:.6rem;padding:.6rem .9rem;font-size:.82rem;margin-bottom:.8rem;"></div>
+                    <div style="display:flex;gap:.7rem;flex-wrap:wrap;">
+                        <button class="admin-btn admin-btn-primary" id="saveSupabaseCfgBtn" style="background:linear-gradient(135deg,#0ea5e9,#0284c7);">💾 Save & Connect</button>
+                        <button class="admin-btn" id="testSupabaseCfgBtn" style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.7);">🧪 Test Connection</button>
+                        <button class="admin-btn" id="clearSupabaseCfgBtn" style="background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.25);color:#f87171;">✕ Disconnect</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2722,8 +3000,22 @@ function showAdminDashboard() {
             overlay.querySelectorAll('.admin-tab-panel').forEach(p => p.classList.remove('active'));
             tab.classList.add('active');
             overlay.querySelector('#tab-' + tab.dataset.tab).classList.add('active');
-            // Re-render live data panels on every tab switch
-            if (tab.dataset.tab === 'logs')     { _dbSyncArray(); renderLogs(); initSqlViewToggle(); }
+            if (tab.dataset.tab === 'logs') {
+                _dbSyncArray(); renderLogs(); initSqlViewToggle();
+                const cfg = getSupabaseConfig();
+                if (cfg.url && cfg.anonKey) {
+                    _setSbStatus('syncing');
+                    _sbPullAllPhotos(); // sync all photos when logs tab opens
+                    _ensureSqlReady().then(function() {
+                        _sbPullAndMergeLogs(function(ok) {
+                            _setSbStatus(ok ? 'ok' : 'error');
+                            renderLogs(); renderOverview(); renderStudentCards();
+                        });
+                    });
+                } else {
+                    _setSbStatus('not_configured');
+                }
+            }
             if (tab.dataset.tab === 'overview') { _dbSyncArray(); renderOverview(); }
             if (tab.dataset.tab === 'students') { _dbSyncArray(); renderStudentCards(); }
             if (tab.dataset.tab === 'results')  { _dbSyncArray(); renderResults(); }
@@ -2763,13 +3055,11 @@ function showAdminDashboard() {
         return Object.values(map);
     }
 
-    // ---- helper: read any student's draft from localStorage ----
     function getStudentDraft(regNo) {
         const k = 'draft_' + regNo.trim().toLowerCase().replace(/\s+/g,'_');
         try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch(e) { return null; }
     }
 
-    // ---- helper: calculate CGPA from a draft object ----
     function calcCgpaFromDraft(draft) {
         if (!draft || !draft.gpas) return null;
         const deptKey = draft.dept || 'COMMON';
@@ -2786,9 +3076,7 @@ function showAdminDashboard() {
         return totCr > 0 ? wSum / totCr : null;
     }
 
-    // Safe draft store for student cards (avoids JSON-in-HTML-attribute breakage)
     const _cardsDraftMap = {};
-    // Safe draft store for results table buttons
     const _resultsDraftMap = {};
 
     function renderStudentCards(filter = '') {
@@ -2805,7 +3093,6 @@ function showAdminDashboard() {
             const draft         = getStudentDraft(s.regNo);
             let gpaChips = '', cgpaLine = '', reportBtn = '';
             if (draft && draft.gpas && Object.keys(draft.gpas).length > 0) {
-                // per-semester GPA chips
                 gpaChips = '<div style="display:flex;flex-wrap:wrap;gap:0.3rem;margin:0.55rem 0 0.3rem;">' +
                     Object.keys(draft.gpas).sort().map(i => {
                         const g  = parseFloat(draft.gpas[i]);
@@ -2813,7 +3100,6 @@ function showAdminDashboard() {
                         const tc = g >= 8.5 ? '#34d399'               : g >= 6.5 ? '#93c5fd'               : g >= 5 ? '#fbbf24'               : '#f87171';
                         return `<span style="background:${bg};color:${tc};border-radius:100px;padding:0.15rem 0.55rem;font-size:0.68rem;font-family:'JetBrains Mono',monospace;font-weight:700;">S${i}: ${g.toFixed(2)}</span>`;
                     }).join('') + '</div>';
-                // CGPA line
                 const cgpa = calcCgpaFromDraft(draft);
                 if (cgpa !== null) {
                     const cc = cgpa >= 8.5 ? '#34d399' : cgpa >= 6.5 ? '#93c5fd' : '#fbbf24';
@@ -2824,7 +3110,6 @@ function showAdminDashboard() {
                         <span style="font-size:0.68rem;color:${cc};">${cl}</span>
                     </div>`;
                 }
-                // View Report button — store draft safely, reference by key only
                 const cardKey = 'card_' + s.regNo.replace(/[^a-zA-Z0-9]/g, '_');
                 _cardsDraftMap[cardKey] = { regNo: s.regNo, name: s.name, draft };
                 reportBtn = `<button data-draftkey="${cardKey}"
@@ -2858,7 +3143,6 @@ function showAdminDashboard() {
                 </div>`;
         }).join('');
 
-        // Attach click handlers safely via JS (no JSON in HTML attributes)
         grid.querySelectorAll('button[data-draftkey]').forEach(btn => {
             btn.addEventListener('click', function() {
                 const entry = _cardsDraftMap[this.dataset.draftkey];
@@ -2867,7 +3151,6 @@ function showAdminDashboard() {
         });
     }
 
-    // (results draft map declared above)
 
     function renderResults(filter = '') {
         const students  = getUniqueStudents().filter(s =>
@@ -2885,7 +3168,6 @@ function showAdminDashboard() {
             return;
         }
         const deptShort = {COMMON:'Basic Engg',ECE:'ECE',MECH:'MECH',CSE:'CSE',EEE:'EEE',CIVIL:'CIVIL',AUTO:'AUTO'};
-        // Clear old results entries only
         Object.keys(_resultsDraftMap).forEach(k => delete _resultsDraftMap[k]);
 
         tbody.innerHTML = withData.map((s, idx) => {
@@ -2903,14 +3185,13 @@ function showAdminDashboard() {
                 const c = v >= 8.5 ? '#34d399' : v >= 6.5 ? '#93c5fd' : v >= 5 ? '#fbbf24' : '#f87171';
                 return `<td style="text-align:center;font-family:'JetBrains Mono',monospace;font-weight:700;color:${c};padding:0.6rem 0.4rem;">${v.toFixed(2)}</td>`;
             };
-            // Store draft safely by index key
             const draftKey = 'res_' + idx;
             _resultsDraftMap[draftKey] = { regNo: s.regNo, name: s.name, draft };
             return `<tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
-                <td style="padding:0.65rem 0.9rem;color:rgba(255,255,255,0.4);">${idx+1}</td>
-                <td style="padding:0.65rem 0.9rem;"><strong style="color:white;">${escapeHtml(s.name)}</strong></td>
-                <td style="padding:0.65rem 0.9rem;font-family:'JetBrains Mono',monospace;font-size:0.78rem;color:rgba(255,255,255,0.6);">${escapeHtml(s.regNo)}</td>
-                <td style="padding:0.65rem 0.9rem;font-size:0.78rem;color:rgba(255,255,255,0.55);">${deptLbl}</td>
+                <td style="padding:0.65rem 0.9rem;color:rgba(255,255,255,0.4);text-align:center;">${idx+1}</td>
+                <td style="padding:0.65rem 0.9rem;text-align:center;"><strong style="color:white;">${escapeHtml(s.name)}</strong></td>
+                <td style="padding:0.65rem 0.9rem;font-family:'JetBrains Mono',monospace;font-size:0.78rem;color:rgba(255,255,255,0.6);text-align:center;">${escapeHtml(s.regNo)}</td>
+                <td style="padding:0.65rem 0.9rem;font-size:0.78rem;color:rgba(255,255,255,0.55);text-align:center;">${deptLbl}</td>
                 ${[1,2,3,4,5,6].map(i => gpaCell(i)).join('')}
                 <td style="text-align:center;font-family:'JetBrains Mono',monospace;font-weight:800;font-size:0.95rem;color:${clColor};padding:0.6rem 0.4rem;">${cgpaStr}</td>
                 <td style="text-align:center;font-size:0.72rem;color:${clColor};padding:0.6rem 0.5rem;">${clStr}</td>
@@ -2925,7 +3206,6 @@ function showAdminDashboard() {
             </tr>`;
         }).join('');
 
-        // Attach click handlers safely via JS (no JSON in HTML attributes)
         tbody.querySelectorAll('button[data-draftkey]').forEach(btn => {
             btn.addEventListener('click', function() {
                 const entry = _resultsDraftMap[this.dataset.draftkey];
@@ -2987,7 +3267,6 @@ function showAdminDashboard() {
                 + '</tr>';
         }).join('');
 
-        // ── Edit button → inline editable row ──────────────────
         tbody.querySelectorAll('.log-edit-btn').forEach(function(btn) {
             btn.onclick = function() {
                 var id     = parseInt(btn.dataset.id);
@@ -3036,20 +3315,17 @@ function showAdminDashboard() {
             };
         });
 
-        // ── Delete button ─────────────────────────────────────
         tbody.querySelectorAll('.log-del-btn').forEach(function(btn) {
             btn.onclick = function() {
                 var id = parseInt(btn.dataset.id);
-                if (!confirm('Delete this log entry?\nThis will also remove it from all devices. Cannot be undone.')) return;
+                if (!confirm('Delete this log entry?\nThis cannot be undone.')) return;
                 var res = runSql('DELETE FROM logs WHERE id=' + id);
                 if (res.error) { alert('SQL Error: ' + res.error); return; }
-                _cloudDeleteLog(id); // sync delete to Firebase
                 renderLogs(); renderOverview();
             };
         });
     }
 
-    // ── SQL editor: execute and display results ──────────────
     function runSqlAndDisplay() {
         var resEl  = overlay.querySelector('#sqlResult');
         var tableW = overlay.querySelector('#sqlResultTableWrap');
@@ -3095,41 +3371,13 @@ function showAdminDashboard() {
         else { _ensureSqlReady().then(function(ok){ ok ? execute() : (resEl.className='sql-error', resEl.textContent='SQLite failed to load'); }); }
     }
 
-    // ── View toggle + preset buttons ────────────────────────
-    /* ── Sync-status helpers (inside dashboard closure) ── */
-    function _setSyncStatus(msg, color) {
-        var el = overlay.querySelector('#logsSyncStatus');
-        if (!el) return; el.textContent = msg; el.style.color = color || 'rgba(255,255,255,0.4)';
-    }
-    function _setRefreshSpinning(on) {
-        var btn = overlay.querySelector('#logsRefreshBtn');
-        if (!btn) return;
-        btn.disabled = on; btn.innerHTML = on ? '⏳ Syncing…' : '🔄 Refresh'; btn.style.opacity = on ? '0.65' : '1';
-    }
-    function doCloudRefresh() {
-        if (_cloudSyncBusy) return;
-        _setRefreshSpinning(true);
-        _setSyncStatus('Pulling from cloud…', '#60a5fa');
-        _cloudPullLogs(function(ok) {
-            _setRefreshSpinning(false); _dbSyncArray(); renderLogs(); renderOverview();
-            if (ok) {
-                var t = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true});
-                _setSyncStatus('✅ Synced · ' + studentLogs.length + ' entries · ' + t, '#34d399');
-            } else {
-                _setSyncStatus('⚠️ Cloud unavailable — local data shown', '#fbbf24');
-            }
-            setTimeout(function() { _setSyncStatus('', ''); }, 9000);
-        });
-    }
-
     function initSqlViewToggle() {
-        var tblBtn     = overlay.querySelector('#logsViewTableBtn');
-        var sqlBtn     = overlay.querySelector('#logsViewSqlBtn');
-        var refreshBtn = overlay.querySelector('#logsRefreshBtn');
-        var tblDiv     = overlay.querySelector('#logsTableView');
-        var sqlDiv     = overlay.querySelector('#logsSqlView');
-        var sqlIn      = overlay.querySelector('#sqlInput');
-        var runBtn     = overlay.querySelector('#sqlRunBtn');
+        var tblBtn  = overlay.querySelector('#logsViewTableBtn');
+        var sqlBtn  = overlay.querySelector('#logsViewSqlBtn');
+        var tblDiv  = overlay.querySelector('#logsTableView');
+        var sqlDiv  = overlay.querySelector('#logsSqlView');
+        var sqlIn   = overlay.querySelector('#sqlInput');
+        var runBtn  = overlay.querySelector('#sqlRunBtn');
         if (!tblBtn || !sqlBtn) return;
 
         tblBtn.onclick = function() {
@@ -3141,7 +3389,6 @@ function showAdminDashboard() {
             tblDiv.style.display = 'none'; sqlDiv.style.display = '';
             sqlBtn.classList.add('active'); tblBtn.classList.remove('active');
         };
-        if (refreshBtn) refreshBtn.onclick = doCloudRefresh;
         if (runBtn) runBtn.onclick = runSqlAndDisplay;
         if (sqlIn) {
             sqlIn.addEventListener('keydown', function(e) {
@@ -3157,19 +3404,6 @@ function showAdminDashboard() {
                 sqlBtn.classList.add('active'); tblBtn.classList.remove('active');
                 if (sqlIn) sqlIn.focus();
             };
-        });
-        /* Auto-pull every time the Logs tab opens */
-        _setSyncStatus('Loading cloud logs…', '#60a5fa');
-        _setRefreshSpinning(true);
-        _cloudPullLogs(function(ok) {
-            _setRefreshSpinning(false); _dbSyncArray(); renderLogs();
-            if (ok) {
-                var t = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true});
-                _setSyncStatus('✅ Cloud synced · ' + t, '#34d399');
-            } else {
-                _setSyncStatus('📂 Local data only', '#fbbf24');
-            }
-            setTimeout(function() { _setSyncStatus('', ''); }, 6000);
         });
     }
 
@@ -3221,16 +3455,9 @@ function showAdminDashboard() {
     renderGradeEditor();
     renderSubjectsEditor();
 
-    // Initialise sql.js then render logs and wire SQL view toggle
     _ensureSqlReady().then(function() {
         renderLogs();
         initSqlViewToggle();
-        // Auto-create a cloud bin on first admin login if none exists
-        if (!localStorage.getItem('srptc_cloud_binId')) {
-            _cloudCreateBin().then(function(ok) {
-                if (ok) console.log('[Cloud] Auto-created bin:', _cloudBinId);
-            });
-        }
     }).catch(function() {
         renderLogs();
         initSqlViewToggle();
@@ -3242,11 +3469,10 @@ function showAdminDashboard() {
     overlay.querySelector('#adminSemSelect').onchange  = renderSubjectsEditor;
 
     overlay.querySelector('#clearLogsBtn').onclick = function() {
-        if (!confirm('Clear ALL entry/exit logs?\n\nThis will also clear logs from ALL devices (cloud sync). This cannot be undone.')) return;
+        if (!confirm('Clear ALL entry/exit logs?\n\nThis cannot be undone.')) return;
         runSql('DELETE FROM logs');
         studentLogs = [];
         saveStudentLogs();
-        _cloudClearAllLogs(); // also wipe Firebase so other devices sync the clear
         renderLogs(); renderOverview(); renderStudentCards(); renderResults();
     };
 
@@ -3311,7 +3537,6 @@ function showAdminDashboard() {
         }
     };
 
-    // ---- PROFILE TAB ----
     const DEFAULT_ADMIN_HASH = '2e1f8f21d238abea1d99e609c3d94eb253c3023f957c48bfc0f19a4812400ec6';
 
     async function sha256(s) {
@@ -3378,7 +3603,6 @@ function showAdminDashboard() {
         showProfileMsg('profilePassMsg', '✅ Password updated successfully!', true);
     };
 
-    // ---- SECRET KEY CHANGE ----
     overlay.querySelector('#saveSecretKeyBtn').onclick = () => {
         const curSecret = overlay.querySelector('#profileCurSecret').value.trim();
         const newSecret = overlay.querySelector('#profileNewSecret').value.trim();
@@ -3393,89 +3617,103 @@ function showAdminDashboard() {
     };
 
 
-    /* ── Cloud Sync / Bin ID wiring ──────────────────────────── */
-    (function() {
-        var binInp  = overlay.querySelector('#profileBinIdInput');
-        var binMsg  = overlay.querySelector('#profileBinMsg');
-        var binBtn  = overlay.querySelector('#saveBinIdBtn');
-        var copyBtn = overlay.querySelector('#copyBinIdBtn');
-        var testBtn = overlay.querySelector('#fbTestSyncBtn');
-        var testMsg = overlay.querySelector('#fbTestSyncMsg');
+    function showSbMsg(msg, success) {
+        const el = overlay.querySelector('#sbConfigMsg');
+        if (!el) return;
+        el.textContent = msg;
+        el.style.display = 'block';
+        el.style.background = success ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)';
+        el.style.border = success ? '1px solid rgba(16,185,129,0.3)' : '1px solid rgba(239,68,68,0.3)';
+        el.style.color = success ? '#34d399' : '#fca5a5';
+        clearTimeout(el._t);
+        el._t = setTimeout(() => { el.style.display = 'none'; }, 4000);
+    }
 
-        // Always show current bin id
-        if (binInp) binInp.value = localStorage.getItem('srptc_cloud_binId') || '';
+    (function prefillSbConfig() {
+        const cfg = getSupabaseConfig();
+        const urlEl = overlay.querySelector('#sbUrlInput');
+        const keyEl = overlay.querySelector('#sbAnonKeyInput');
+        if (urlEl && cfg.url)     urlEl.value = cfg.url;
+        if (keyEl && cfg.anonKey) keyEl.value = cfg.anonKey;
+        _setSbStatus(cfg.url && cfg.anonKey ? 'idle' : 'not_configured');
+    })();
 
-        function showMsg(el, txt, ok) {
-            if (!el) return;
-            el.style.display    = 'block';
-            el.style.background = ok ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)';
-            el.style.border     = ok ? '1px solid rgba(16,185,129,0.3)' : '1px solid rgba(239,68,68,0.3)';
-            el.style.color      = ok ? '#34d399' : '#fca5a5';
-            el.textContent      = txt;
-            setTimeout(function() { el.style.display = 'none'; }, 7000);
-        }
+    overlay.querySelector('#saveSupabaseCfgBtn').onclick = function() {
+        const url    = (overlay.querySelector('#sbUrlInput').value || '').trim();
+        const anonKey = (overlay.querySelector('#sbAnonKeyInput').value || '').trim();
+        if (!url || !anonKey) return showSbMsg('⚠️ Both URL and Anon Key are required.', false);
+        if (!url.startsWith('https://')) return showSbMsg('❌ URL must start with https://', false);
+        saveSupabaseConfig(url, anonKey);
+        showSbMsg('✅ Supabase config saved! Syncing logs & photos…', true);
+        _setSbStatus('syncing');
+        _sbPullAllPhotos(); // pull all photos silently in background
+        _sbPullAndMergeLogs(function(ok) {
+            _setSbStatus(ok ? 'ok' : 'error');
+            renderLogs(); renderOverview(); renderStudentCards();
+            if (!ok) showSbMsg('⚠️ Config saved, but sync failed. Check URL/key and table names.', false);
+        });
+    };
 
-        // Save / auto-create bin
-        if (binBtn) binBtn.onclick = function() {
-            var val = binInp ? binInp.value.trim() : '';
-            if (val) {
-                _cloudBinId = val;
-                localStorage.setItem('srptc_cloud_binId', val);
-                showMsg(binMsg, '✅ Bin ID saved! Go to Logs → 🔄 Refresh to pull logs.', true);
+    overlay.querySelector('#testSupabaseCfgBtn').onclick = async function() {
+        const url    = (overlay.querySelector('#sbUrlInput').value || '').trim();
+        const anonKey = (overlay.querySelector('#sbAnonKeyInput').value || '').trim();
+        if (!url || !anonKey) return showSbMsg('⚠️ Enter URL and Anon Key first.', false);
+        showSbMsg('🔄 Testing connection…', true);
+        try {
+            const tmpClient = supabase.createClient(url, anonKey);
+            const { error } = await tmpClient.from('student_logs').select('id').limit(1);
+            if (error) {
+                showSbMsg('❌ Connection failed: ' + error.message, false);
             } else {
-                showMsg(binMsg, '⏳ Creating new cloud bin…', true);
-                _cloudCreateBin().then(function(ok) {
-                    if (ok) {
-                        if (binInp) binInp.value = _cloudBinId;
-                        showMsg(binMsg, '✅ New bin created! Copy this ID to other devices: ' + _cloudBinId, true);
-                    } else {
-                        showMsg(binMsg, '⚠️ Could not create bin — check internet connection.', false);
-                    }
-                });
+                showSbMsg('✅ Connection successful! Table found.', true);
             }
-        };
-
-        // Copy Bin ID to clipboard
-        if (copyBtn) copyBtn.onclick = function() {
-            var id = (binInp && binInp.value.trim()) || _cloudBinId || localStorage.getItem('srptc_cloud_binId') || '';
-            if (!id) { showMsg(binMsg, '⚠️ No Bin ID yet — save one first.', false); return; }
-            navigator.clipboard.writeText(id).then(function() {
-                showMsg(binMsg, '📋 Bin ID copied to clipboard!', true);
-            }).catch(function() {
-                showMsg(binMsg, 'ID: ' + id + ' (copy manually)', true);
-            });
-        };
-
-        // Test sync
-        if (testBtn) testBtn.onclick = function() {
-            testBtn.disabled = true;
-            testBtn.textContent = '⏳ Testing…';
-            _cloudPullLogs(function(ok, count) {
-                testBtn.disabled = false;
-                testBtn.textContent = '🔄 Test Cloud Sync';
-                var t = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
-                if (ok) {
-                    if (binInp) binInp.value = localStorage.getItem('srptc_cloud_binId') || '';
-                    showMsg(testMsg, '✅ Connected — ' + count + ' log entries in cloud · ' + t, true);
-                } else {
-                    showMsg(testMsg, '⚠️ Cloud unreachable — check internet or Bin ID.', false);
-                }
-            });
-        };
-
-        // Auto-create bin if none exists yet (silent, on profile open)
-        if (!localStorage.getItem('srptc_cloud_binId')) {
-            _cloudCreateBin().then(function(ok) {
-                if (ok && binInp) binInp.value = _cloudBinId;
-            });
+        } catch(e) {
+            showSbMsg('❌ Error: ' + e.message, false);
         }
+    };
+
+    overlay.querySelector('#clearSupabaseCfgBtn').onclick = function() {
+        if (!confirm('Disconnect Supabase?\n\nLocal logs will be kept, but future logins will not sync.')) return;
+        localStorage.removeItem(SUPABASE_CONFIG_KEY);
+        _sbClient = null;
+        overlay.querySelector('#sbUrlInput').value = '';
+        overlay.querySelector('#sbAnonKeyInput').value = '';
+        _setSbStatus('not_configured');
+        showSbMsg('🔌 Supabase disconnected. Logs are now local-only.', false);
+    };
+
+    overlay.querySelector('#sbSyncNowBtn').onclick = function() {
+        const cfg = getSupabaseConfig();
+        if (!cfg.url || !cfg.anonKey) {
+            alert('Supabase is not configured.\n\nGo to Profile tab → Supabase Sync to add your project URL and Anon Key.');
+            return;
+        }
+        _setSbStatus('syncing');
+        _sbPullAllPhotos(); // pull all student photos into localStorage
+        _sbPullAndMergeLogs(function(ok) {
+            _setSbStatus(ok ? 'ok' : 'error');
+            renderLogs(); renderOverview(); renderStudentCards();
+        });
+    };
+
+    (function autoSyncOnLogin() {
+        const cfg = getSupabaseConfig();
+        if (!cfg.url || !cfg.anonKey) {
+            _setSbStatus('not_configured');
+            return;
+        }
+        _setSbStatus('syncing');
+        _sbPullAllPhotos(); // pull all student photos so admin reports show photos
+        _ensureSqlReady().then(function() {
+            _sbPullAndMergeLogs(function(ok) {
+                _setSbStatus(ok ? 'ok' : 'error');
+                renderLogs(); renderOverview(); renderStudentCards();
+            });
+        });
     })();
 }
 
 
-// ============================================================
-// GPA FUNCTIONS
-// ============================================================
 const deptSelect   = document.getElementById('deptSelect');
 const semSelect    = document.getElementById('semSelect');
 const subjectsBody = document.getElementById('subjectsBody');
@@ -3500,9 +3738,7 @@ function updateSemesterCreditsDisplay() {
     }
 }
 
-// ============================================================
-// RENDER SUBJECTS — then restore saved grades from draft
-// ============================================================
+
 function renderSubjects() {
     const subjects = getSubjects();
     subjectsBody.innerHTML = '';
@@ -3556,16 +3792,13 @@ function renderSubjects() {
         gc.appendChild(gs);
     });
 
-    // Restore draft grades after rendering
     restoreDraftGrades();
 
     document.getElementById('gpaValue').textContent     = '—';
     document.getElementById('totalCredits').textContent = '0';
 }
 
-// ============================================================
-// COMPUTE GPA (skip PENDING)
-// ============================================================
+
 function computeGPA() {
     let pts = 0, cr = 0;
     subjectsBody.querySelectorAll('tr').forEach(row => {
@@ -3605,9 +3838,7 @@ function resetSubjects() {
     onCalculateGPA();
 }
 
-// ============================================================
-// SAVE SEMESTER GPA → updates CGPA table + draft
-// ============================================================
+
 function saveCurrentSemesterGPA() {
     const res = computeGPA();
     if (!res) { alert('Calculate GPA first.'); return; }
@@ -3622,9 +3853,7 @@ function saveCurrentSemesterGPA() {
     }
 }
 
-// ============================================================
-// CGPA
-// ============================================================
+
 function calculateOverallCGPA() {
     let wSum = 0, totCr = 0, count = 0;
     for (let i = 1; i <= 6; i++) {
@@ -3665,9 +3894,7 @@ function updateGradeInfoDisplay() {
     if (chips) chips.innerHTML = gradesList.map(g => `<div class="chip"><strong>${g}</strong>=${gradePoints[g]}</div>`).join('');
 }
 
-// ============================================================
-// ADMIN — View & download any student's report from their draft
-// ============================================================
+
 function adminBuildMarkSheet(regNo, name, draft) {
     const deptKey   = draft.dept || 'COMMON';
     const deptLabel = getDeptLabel(deptKey);
@@ -3716,7 +3943,6 @@ function adminBuildMarkSheet(regNo, name, draft) {
                     ? `<span style="color:#991b1b;font-weight:700;">FAIL</span>`
                     : `<span style="color:#065f46;font-weight:700;">PASS</span>`);
 
-            // Always count every subject towards max GP (including ASC pending)
             semMaxGP += 10;
             if (!isPending && gp !== null) {
                 semCredits  += credits;
@@ -3771,7 +3997,7 @@ function adminBuildMarkSheet(regNo, name, draft) {
                 </tbody>
             </table>
             <div class="rpt-wm-stamp" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:340px;pointer-events:none;z-index:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;">
-                <img src="srptc.png" alt="Watermark" style="width:220px;height:220px;object-fit:contain;opacity:0.10;display:block;filter:grayscale(20%);" onerror="this.style.display='none'">
+                <img src="${LOGO_DATA_URL || 'srptc.png'}" alt="Watermark" style="width:220px;height:220px;object-fit:contain;opacity:0.10;display:block;filter:grayscale(20%);" >
                 <div class="wm-name" style="font-size:13px;font-weight:900;color:#1a3a6a;opacity:0.13;letter-spacing:0.18em;text-transform:uppercase;text-align:center;font-family:'Sora',Arial,sans-serif;white-space:nowrap;line-height:1.5;">Sriram Polytechnic College</div>
             </div>
         </div>`;
@@ -3781,10 +4007,10 @@ function adminBuildMarkSheet(regNo, name, draft) {
     const cgpaClass = grandCredits > 0 ? classLabel(parseFloat(cgpa)) : '—';
 
     return `
-        <div class="rpt-header" style="display:grid;grid-template-columns:80px 1fr auto;align-items:center;gap:14px;">
+        <div class="rpt-header" style="display:grid;grid-template-columns:92px 1fr auto;align-items:center;gap:14px;">
         <div class="rpt-logo-wrap">
-            <img src="srptc.png" class="rpt-logo-img" alt="Sriram Polytechnic" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-            <div class="rpt-logo-fallback" style="display:none;">🏛️</div>
+            <img src="${LOGO_DATA_URL || 'srptc.png'}" class="rpt-logo-img" alt="Sriram Polytechnic" >
+            <div class="rpt-logo-fallback" style="display:none;">SPC</div>
         </div>
         <div class="rpt-college-info">
             <div class="rpt-college-name">Sriram Polytechnic College</div>
@@ -3798,12 +4024,26 @@ function adminBuildMarkSheet(regNo, name, draft) {
         </div>
         <div class="rpt-doc-title"><h2>Student Mark Sheet</h2><p>Generated: ${dateStr} at ${timeStr}</p></div>
     </div>
-    <div class="rpt-student-box" style="grid-template-columns:1fr 1fr 1fr 1fr;">
-        <div class="rpt-student-cell"><div class="rpt-cell-label">Student Name</div><div class="rpt-cell-value">${escapeHtml(name)}</div></div>
+    ${(function(){
+        const _ph = getStudentPhoto(regNo);
+        const _pi = _ph ? `<img class="rpt-passport-photo" src="${_ph}" alt="Passport Photo">` : `<div class="rpt-passport-placeholder">Passport<br>Photo</div>`;
+        const _cgpaVal = cgpa !== '—' ? cgpa : '—';
+        const _cgpaCol = cgpa !== '—' ? (parseFloat(cgpa) >= 8.5 ? '#065f46' : parseFloat(cgpa) >= 6.5 ? '#1a4a8a' : '#92400e') : '#64748b';
+        const _cgpaCls = cgpa !== '—' ? (parseFloat(cgpa) >= 8.5 ? 'First Class w/ Distinction' : parseFloat(cgpa) >= 6.5 ? 'First Class' : 'Second Class') : '—';
+        return `<div class="rpt-student-box" style="grid-template-columns:1.4fr 1fr 1fr 0.8fr;">
+        <div class="rpt-student-cell" style="flex-direction:row;gap:10px;">
+            ${_pi}
+            <div style="text-align:center;"><div class="rpt-cell-label">Student Name</div><div class="rpt-cell-value">${escapeHtml(name)}</div></div>
+        </div>
         <div class="rpt-student-cell"><div class="rpt-cell-label">Register Number</div><div class="rpt-cell-value" style="font-family:'JetBrains Mono','Courier New',monospace;">${escapeHtml(regNo)}</div></div>
         <div class="rpt-student-cell"><div class="rpt-cell-label">Course</div><div class="rpt-cell-value">${escapeHtml(deptLabel)}</div></div>
-        <div class="rpt-student-cell" style="border-right:none;"><div class="rpt-cell-label">CGPA / Class</div><div class="rpt-cell-value" style="font-family:'JetBrains Mono','Courier New',monospace;color:#1a4a8a;">${cgpa} <span style="font-size:9px;color:#64748b;">${cgpaClass}</span></div></div>
-    </div>
+        <div class="rpt-student-cell" style="border-right:none;background:#f0f7ff;">
+            <div class="rpt-cell-label">Total CGPA</div>
+            <div class="rpt-cell-value" style="font-size:19px;font-family:'JetBrains Mono','Courier New',monospace;color:${_cgpaCol};">${_cgpaVal}</div>
+            <div style="font-size:8.5px;font-weight:700;color:${_cgpaCol};margin-top:2px;">${_cgpaCls}</div>
+        </div>
+    </div>`;
+    })()}
     <div class="rpt-section-title">Subject-wise Grade Report (All Semesters)</div>
     ${semSections || `<div style="text-align:center;color:#9ca3af;padding:2rem;">No semester data found for this student.</div>`}
     <div style="margin-top:14px;background:#eef3fb;border:1.5px solid #c7d8f0;border-radius:6px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
@@ -3849,13 +4089,11 @@ function adminViewReport(regNo, name, draft) {
             const tc   = gradeTextColor(gpa);
             const lbl  = gpa >= 8.5 ? 'Distinction' : gpa >= 6.5 ? 'First Class' : gpa >= 5 ? 'Pass' : 'Fail';
 
-            // Compute earned GP and max GP from subject grades for formula preview
             let earnedGP = 0, maxGP = 0, hasGrades = false;
             subs.forEach((sub, idx) => {
                 const gradeKey  = `${deptKey}_${i}_${idx}`;
                 const grade     = (draft && draft.grades && draft.grades[gradeKey]) || '';
                 const isPending = !grade || grade === 'PENDING';
-                // Always count every subject in max GP (including ASC pending)
                 maxGP += 10;
                 hasGrades = true;
                 if (!isPending && gradePoints[grade] !== undefined) {
@@ -3891,11 +4129,11 @@ function adminViewReport(regNo, name, draft) {
 
     const academicHTML = `
     <div style="position:relative;overflow:visible;">
-        <div class="rpt-header" style="display:grid;grid-template-columns:80px 1fr auto;align-items:center;gap:14px;">
+        <div class="rpt-header" style="display:grid;grid-template-columns:92px 1fr auto;align-items:center;gap:14px;">
         <div class="rpt-logo-wrap">
-            <img src="srptc.png" class="rpt-logo-img" alt="Sriram Polytechnic"
-                 onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-            <div class="rpt-logo-fallback" style="display:none;">🏛️</div>
+            <img src="${LOGO_DATA_URL || 'srptc.png'}" class="rpt-logo-img" alt="Sriram Polytechnic"
+                 >
+            <div class="rpt-logo-fallback" style="display:none;">SPC</div>
         </div>
         <div class="rpt-college-info">
             <div class="rpt-college-name">Sriram Polytechnic College</div>
@@ -3912,10 +4150,13 @@ function adminViewReport(regNo, name, draft) {
             <p>Generated: ${dateStr} at ${timeStr}</p>
         </div>
     </div>
-    <div class="rpt-student-box">
-        <div class="rpt-student-cell">
-            <div class="rpt-cell-label">Student Name</div>
-            <div class="rpt-cell-value">${escapeHtml(name)}</div>
+    ${(function(){
+        const _ph = getStudentPhoto(regNo);
+        const _pi = _ph ? `<img class="rpt-passport-photo" src="${_ph}" alt="Passport Photo">` : `<div class="rpt-passport-placeholder">Passport<br>Photo</div>`;
+        return `<div class="rpt-student-box" style="grid-template-columns:1.4fr 1fr 1fr 0.8fr;">
+        <div class="rpt-student-cell" style="flex-direction:row;gap:10px;">
+            ${_pi}
+            <div style="text-align:center;"><div class="rpt-cell-label">Student Name</div><div class="rpt-cell-value">${escapeHtml(name)}</div></div>
         </div>
         <div class="rpt-student-cell">
             <div class="rpt-cell-label">Register Number</div>
@@ -3925,7 +4166,13 @@ function adminViewReport(regNo, name, draft) {
             <div class="rpt-cell-label">Course</div>
             <div class="rpt-cell-value">${escapeHtml(deptLabel)}</div>
         </div>
-    </div>
+        <div class="rpt-student-cell" style="border-right:none;background:#f0f7ff;">
+            <div class="rpt-cell-label">Total CGPA</div>
+            <div class="rpt-cell-value" style="font-size:19px;font-family:'JetBrains Mono','Courier New',monospace;color:${cgpa !== null ? (cgpa >= 8.5 ? '#065f46' : cgpa >= 6.5 ? '#1a4a8a' : '#92400e') : '#64748b'};">${cgpaDisplay}</div>
+            ${cgpa !== null ? `<div style="font-size:8.5px;font-weight:700;color:${cgpa >= 8.5 ? '#065f46' : cgpa >= 6.5 ? '#1a4a8a' : '#92400e'};margin-top:2px;">${cgpaClass}</div>` : ''}
+        </div>
+    </div>`;
+    })()}
     <div class="rpt-section-title">Semester-wise GPA Summary</div>
     <table class="rpt-sem-table">
         <thead><tr>
@@ -3981,14 +4228,13 @@ function adminViewReport(regNo, name, draft) {
     </div>
     <!-- Page-level watermark for academic report -->
     <div class="rpt-page-wm" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:420px;pointer-events:none;z-index:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;">
-        <img src="srptc.png" alt="Watermark" style="width:320px;height:320px;object-fit:contain;opacity:0.10;display:block;filter:grayscale(20%);" onerror="this.style.display='none'">
+        <img src="${LOGO_DATA_URL || 'srptc.png'}" alt="Watermark" style="width:320px;height:320px;object-fit:contain;opacity:0.10;display:block;filter:grayscale(20%);" >
         <div class="wm-name" style="font-size:16px;font-weight:900;color:#1a3a6a;opacity:0.13;letter-spacing:0.20em;text-transform:uppercase;text-align:center;font-family:'Sora',Arial,sans-serif;white-space:nowrap;line-height:1.5;">Sriram Polytechnic College</div>
     </div>
     </div>`;
 
     const marksheetHTML = adminBuildMarkSheet(regNo, name, draft);
 
-    // Open a full-screen preview modal
     const modal = document.createElement('div');
     modal.id = '__adminReportModal__';
     modal.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.9);backdrop-filter:blur(14px);display:flex;flex-direction:column;align-items:center;padding:1rem;overflow-y:auto;';
@@ -4018,7 +4264,6 @@ function adminViewReport(regNo, name, draft) {
         </div>`;
     document.body.appendChild(modal);
 
-    // Tab switching
     modal.querySelector('#__admTabAcademic__').onclick = function() {
         modal.querySelector('#__admPageAcademic__').style.display = 'block';
         modal.querySelector('#__admPageMarksheet__').style.display = 'none';
@@ -4032,11 +4277,9 @@ function adminViewReport(regNo, name, draft) {
         modal.querySelector('#__admTabAcademic__').classList.replace('active','inactive');
     };
 
-    // Close button
     modal.querySelector('#__admCloseBtn__').onclick = function() { modal.remove(); };
     modal.addEventListener('click', function(e) { if (e.target === modal) modal.remove(); });
 
-    // Print button (prints visible page)
     modal.querySelector('#__admPrintBtn__').onclick = function() {
         const visPage = modal.querySelector('#__admPageMarksheet__').style.display !== 'none'
             ? modal.querySelector('#__admPageMarksheet__')
@@ -4046,115 +4289,143 @@ function adminViewReport(regNo, name, draft) {
         wrapper.style.cssText = 'position:fixed;inset:0;background:white;z-index:99999;padding:1cm;font-family:Sora,sans-serif;color:#1a202c;overflow:auto;';
         wrapper.appendChild(visPage.cloneNode(true));
         document.body.appendChild(wrapper);
-        window.print();
-        wrapper.remove();
+        setTimeout(function() {
+            window.print();
+            wrapper.remove();
+        }, 300);
     };
 
     modal.querySelector('#__admPdfBtn__').onclick = function() {
-        const btn      = this;
-        const origText = btn.innerHTML;
-        btn.innerHTML  = '<span class="pdf-spinner"></span> Generating…';
-        btn.disabled   = true;
+        var btn      = this;
+        var origText = btn.innerHTML;
+        btn.innerHTML = '<span class="pdf-spinner"></span> Generating…';
+        btn.disabled  = true;
 
-        const sName    = name.replace(/\s+/g, '_');
-        const sReg     = regNo.replace(/\s+/g, '_');
-        const isMs     = modal.querySelector('#__admPageMarksheet__').style.display !== 'none';
-        const fileName = isMs
+        var isMs     = modal.querySelector('#__admPageMarksheet__').style.display !== 'none';
+        var sName    = name.replace(/\s+/g, '_');
+        var sReg     = regNo.replace(/\s+/g, '_');
+        var fileName = isMs
             ? 'MarkSheet_'      + sName + '_' + sReg + '.pdf'
             : 'AcademicReport_' + sName + '_' + sReg + '.pdf';
-
-        const sourceEl = isMs
+        var sourceEl = isMs
             ? modal.querySelector('#__admPageMarksheet__')
             : modal.querySelector('#__admPageAcademic__');
 
-        // Use the SAME #printableContent the student download uses so all
-        // .rpt-* CSS classes are applied — the student PDF works because it
-        // renders inside the live document; we replicate that here.
-        var printable     = document.getElementById('printableContent');
-        var pageAcademic  = document.getElementById('rptPageAcademic');
-        var pageMarksheet = document.getElementById('rptPageMarksheet');
-
-        // Snapshot everything we will touch
-        var savedPrintable  = printable.innerHTML;
-        var savedPrintCSS   = printable.style.cssText;
-        var savedAcademic   = pageAcademic.style.cssText;
-        var savedMarksheet  = pageMarksheet.style.cssText;
-
-        // Stamp the admin content into the live report pages
-        if (isMs) {
-            pageMarksheet.innerHTML = sourceEl.innerHTML;
-            pageMarksheet.style.cssText = 'display:block!important;overflow:visible!important;max-height:none!important;height:auto!important;position:relative;';
-            pageAcademic.style.cssText  = 'display:none!important;';
-        } else {
-            pageAcademic.innerHTML  = sourceEl.innerHTML;
-            pageAcademic.style.cssText  = 'display:block!important;overflow:visible!important;max-height:none!important;height:auto!important;position:relative;';
-            pageMarksheet.style.cssText = 'display:none!important;';
-        }
-        printable.style.cssText = 'display:block!important;background:white!important;width:718px!important;max-width:718px!important;margin:0!important;padding:24px 28px!important;box-sizing:border-box!important;overflow:visible!important;max-height:none!important;height:auto!important;';
-
-        function restore() {
-            printable.innerHTML     = savedPrintable;
-            printable.style.cssText = savedPrintCSS;
-            pageAcademic.style.cssText  = savedAcademic;
-            pageMarksheet.style.cssText = savedMarksheet;
+        function finish(ok) {
+            btn.innerHTML = origText;
+            btn.disabled  = false;
+            showPdfToast(ok ? '✅ PDF saved successfully!' : '❌ PDF generation failed. Try again.', ok ? 'success' : 'error');
         }
 
-        var opt = {
-            margin:   [10, 10, 10, 10],
-            filename: fileName,
-            image:    { type: 'png', quality: 1.0 },
-            html2canvas: {
-                scale: 3, useCORS: true, allowTaint: true,
-                logging: false, backgroundColor: '#ffffff',
-                scrollX: 0, scrollY: 0,
-                onclone: function(clonedDoc) {
-                    ['globalCollegeHeader','landingPage','mainApp','pdfToast','__adminReportModal__'].forEach(function(id) {
-                        var el = clonedDoc.getElementById(id);
-                        if (el) el.style.cssText = 'display:none!important;';
-                    });
-                    var cp = clonedDoc.getElementById('printableContent');
-                    if (cp) cp.style.cssText = 'display:block!important;background:white!important;width:718px!important;max-width:718px!important;margin:0!important;padding:24px 28px!important;box-sizing:border-box!important;overflow:visible!important;max-height:none!important;height:auto!important;';
-                    var ca = clonedDoc.getElementById(isMs ? 'rptPageMarksheet' : 'rptPageAcademic');
-                    var co = clonedDoc.getElementById(isMs ? 'rptPageAcademic'  : 'rptPageMarksheet');
-                    if (ca) ca.style.cssText = 'display:block!important;overflow:visible!important;max-height:none!important;height:auto!important;position:relative;';
-                    if (co) co.style.cssText = 'display:none!important;';
-                    var po = clonedDoc.getElementById('printOverlay');
-                    if (po) po.style.cssText = 'display:none!important;';
-                    var el2 = cp ? cp.parentElement : null;
-                    while (el2 && el2 !== clonedDoc.body) {
-                        el2.style.overflow = 'visible';
-                        el2.style.maxHeight = 'none';
-                        el2.style.height = 'auto';
-                        el2 = el2.parentElement;
-                    }
-                    clonedDoc.body.style.cssText = 'overflow:visible!important;height:auto!important;margin:0!important;padding:0!important;background:white!important;';
-                    clonedDoc.documentElement.style.cssText = 'overflow:visible!important;height:auto!important;';
-                }
-            },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: false },
-            pagebreak: { mode: ['css','legacy'], avoid: ['.rpt-ms-wrap','tr','.rpt-cgpa-box','.rpt-footer','.rpt-student-box','.rpt-header'] }
-        };
-
-        html2pdf().set(opt).from(printable).save()
-            .then(function() {
-                restore();
-                btn.innerHTML = origText;
-                btn.disabled  = false;
-                showPdfToast('✅ PDF saved successfully!', 'success');
-            })
-            .catch(function(err) {
-                console.error('Admin PDF error:', err);
-                restore();
-                btn.innerHTML = origText;
-                btn.disabled  = false;
-                showPdfToast('❌ PDF generation failed. Please try again.', 'error');
+        function imgToDataUrl(img) {
+            return new Promise(function(resolve) {
+                if (!img.src || img.src.startsWith('data:')) { resolve(); return; }
+                var c = document.createElement('canvas');
+                var i = new Image();
+                i.crossOrigin = 'anonymous';
+                i.onload = function() {
+                    try {
+                        c.width = i.naturalWidth || i.width;
+                        c.height = i.naturalHeight || i.height;
+                        if (c.width && c.height) { c.getContext('2d').drawImage(i, 0, 0); img.src = c.toDataURL('image/png'); }
+                    } catch(e) { /* tainted — leave visible */ }
+                    resolve();
+                };
+                i.onerror = function() { resolve(); };
+                i.src = img.src + (img.src.includes('?') ? '&' : '?') + '_cb=' + Date.now();
             });
+        }
+
+        var allImgs = Array.from(sourceEl.querySelectorAll('img'));
+        var bestLogo = LOGO_DATA_URL || FALLBACK_LOGO_SVG;
+        allImgs.forEach(function(img) {
+            if (img.classList.contains('rpt-logo-img') ||
+                img.alt === 'Watermark' ||
+                img.alt === 'Sriram Polytechnic' ||
+                img.alt === 'Sriram Polytechnic College') {
+                img.src = bestLogo;
+            }
+        });
+        Promise.all(allImgs.map(imgToDataUrl)).then(function() {
+            var savedDisplay = sourceEl.style.display;
+            var savedOpacity = sourceEl.style.opacity;
+            sourceEl.style.display = 'block';
+            sourceEl.style.opacity = '1';
+
+            requestAnimationFrame(function() {
+                requestAnimationFrame(function() {
+                    var captureH = Math.max(sourceEl.scrollHeight, sourceEl.offsetHeight, 200);
+                    html2canvas(sourceEl, {
+                        scale: 3, useCORS: false, allowTaint: false, logging: false,
+                        backgroundColor: '#ffffff', scrollX: 0, scrollY: -window.scrollY,
+                        windowWidth: document.documentElement.offsetWidth,
+                        width: sourceEl.offsetWidth || 794, height: captureH,
+                        imageTimeout: 0,
+                        onclone: function(clonedDoc) {
+                            /* Keep font links — removing them causes text spacing issues */
+                            ['#__admPageAcademic__','#__admPageMarksheet__','.rpt-ms-wrap','.rpt-section'].forEach(function(sel) {
+                                clonedDoc.querySelectorAll(sel).forEach(function(el) { el.style.display = 'block'; el.style.opacity = '1'; });
+                            });
+                            var bestLogo = LOGO_DATA_URL || FALLBACK_LOGO_SVG;
+                            clonedDoc.querySelectorAll('img').forEach(function(img) {
+                                if (img.classList.contains('rpt-logo-img') ||
+                                    img.alt === 'Watermark' ||
+                                    img.alt === 'Sriram Polytechnic' ||
+                                    img.alt === 'Sriram Polytechnic College') {
+                                    img.src = bestLogo;
+                                    return;
+                                }
+                                var src = img.getAttribute('src') || '';
+                                if (src && !src.startsWith('data:')) {
+                                    try {
+                                        var imgOrigin  = new URL(img.src, window.location.href).origin;
+                                        var pageOrigin = new URL(window.location.href).origin;
+                                        if (imgOrigin !== 'null' && imgOrigin !== pageOrigin) { img.style.display = 'none'; }
+                                    } catch(e) {}
+                                }
+                            });
+                        }
+                    }).then(function(canvas) {
+                        sourceEl.style.display = savedDisplay;
+                        sourceEl.style.opacity = savedOpacity;
+                        try {
+                            var JsPDF  = _getJsPDF();
+                            if (!JsPDF) throw new Error('jsPDF not loaded');
+                            var pdf    = new JsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+                            var pageW  = pdf.internal.pageSize.getWidth();
+                            var pageH  = pdf.internal.pageSize.getHeight();
+                            var margin = 8;
+                            var printW = pageW - margin * 2;
+                            var printH = pageH - margin * 2;
+                            var imgW   = canvas.width, imgH = canvas.height;
+                            var pxPerMm = imgW / printW;
+                            var pageHpx = printH * pxPerMm;
+                            var pages   = Math.ceil(imgH / pageHpx);
+                            for (var i = 0; i < pages; i++) {
+                                if (i > 0) pdf.addPage();
+                                var srcY = i * pageHpx;
+                                var srcH = Math.min(pageHpx, imgH - srcY);
+                                var sc = document.createElement('canvas');
+                                sc.width = imgW; sc.height = Math.ceil(srcH);
+                                sc.getContext('2d').drawImage(canvas, 0, srcY, imgW, srcH, 0, 0, imgW, Math.ceil(srcH));
+                                pdf.addImage(sc.toDataURL('image/png'), 'PNG', margin, margin, printW, srcH / pxPerMm);
+                            }
+                            pdf.save(fileName);
+                            finish(true);
+                        } catch(e) { console.error('jsPDF admin:', e); finish(false); }
+                    }).catch(function(err) {
+                        sourceEl.style.display = savedDisplay;
+                        sourceEl.style.opacity = savedOpacity;
+                        console.error('html2canvas admin:', err);
+                        finish(false);
+                    });
+                });
+            });
+        });
     };
 }
 
-// ============================================================
-// PRINT REPORT — properly formatted A4 PDF
-// ============================================================
+
 function getDeptLabel(val) {
     const map = {
         COMMON:'Basic Engineering', ECE:'1040 - Electronics & Communication',
@@ -4164,25 +4435,19 @@ function getDeptLabel(val) {
     return map[val] || val;
 }
 
-// ============================================================
-// HELPER — get subjects for a given dept + semester number
-// ============================================================
+
 function getSubjectsForSem(dept, semNum) {
     const deptMap = {ECE:ECE_SUBJECTS,MECH:MECH_SUBJECTS,CSE:CSE_SUBJECTS,EEE:EEE_SUBJECTS,CIVIL:CIVIL_SUBJECTS,AUTO:AUTO_SUBJECTS};
     if (semNum === 1) return SEM1_COMMON;
     return (deptMap[dept] || {})[semNum] || [];
 }
 
-// ============================================================
-// HELPER — get subject display name (strip Tamil prefix)
-// ============================================================
+
 function subjectDisplayName(raw) {
     return raw.includes('_') ? raw.split('_')[1].trim() : raw;
 }
 
-// ============================================================
-// ACADEMIC PERFORMANCE REPORT — Polished A4 layout
-// ============================================================
+
 function buildPrintableReport() {
     const dept      = deptSelect.value;
     const deptLabel = getDeptLabel(dept);
@@ -4205,14 +4470,12 @@ function buildPrintableReport() {
             const tc  = gradeTextColor(gpa);
             const lbl = gpa >= 8.5 ? 'Distinction' : gpa >= 6.5 ? 'First Class' : gpa >= 5 ? 'Pass' : 'Fail';
 
-            // Compute earned GP and max GP from subject grades for formula preview
             const subs = getSubjectsForSem(dept, i);
             let earnedGP = 0, maxGP = 0, hasGrades = false;
             subs.forEach((sub, idx) => {
                 const gradeKey  = `${dept}_${i}_${idx}`;
                 const grade     = (draft && draft.grades && draft.grades[gradeKey]) || '';
                 const isPending = !grade || grade === 'PENDING';
-                // Always count every subject in max GP (including ASC pending)
                 maxGP += 10;
                 hasGrades = true;
                 if (!isPending && gradePoints[grade] !== undefined) {
@@ -4253,15 +4516,19 @@ function buildPrintableReport() {
 
     const studentName  = escapeHtml(currentStudentName  || '—');
     const studentRegNo = escapeHtml(currentStudentRegNo || '—');
+    const _studentPhotoData = getStudentPhoto(currentStudentRegNo || '');
+    const _studentPhotoHtml = _studentPhotoData
+        ? `<img class="rpt-passport-photo" src="${_studentPhotoData}" alt="Passport Photo">`
+        : `<div class="rpt-passport-placeholder">Passport<br>Photo</div>`;
 
     return `
     <!-- ── HEADER ── -->
         <div class="rpt-header">
         <div class="rpt-header-top">
             <div class="rpt-logo-wrap">
-                <img src="srptc.png" class="rpt-logo-img" alt="Sriram Polytechnic"
-                     onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-                <div class="rpt-logo-fallback" style="display:none;">🏛️</div>
+                <img src="${LOGO_DATA_URL || 'srptc.png'}" class="rpt-logo-img" alt="Sriram Polytechnic"
+                     >
+                <div class="rpt-logo-fallback" style="display:none;">SPC</div>
             </div>
             <div class="rpt-college-info">
                 <div class="rpt-college-name">Sriram Polytechnic College</div>
@@ -4281,10 +4548,10 @@ function buildPrintableReport() {
     </div>
 
     <!-- ── STUDENT INFO ── -->
-    <div class="rpt-student-box">
-        <div class="rpt-student-cell">
-            <div class="rpt-cell-label">Student Name</div>
-            <div class="rpt-cell-value">${studentName}</div>
+    <div class="rpt-student-box" style="grid-template-columns:1.4fr 1fr 1fr 0.8fr;">
+        <div class="rpt-student-cell" style="flex-direction:row;gap:10px;">
+            ${_studentPhotoHtml}
+            <div style="text-align:center;"><div class="rpt-cell-label">Student Name</div><div class="rpt-cell-value">${studentName}</div></div>
         </div>
         <div class="rpt-student-cell">
             <div class="rpt-cell-label">Register Number</div>
@@ -4293,6 +4560,11 @@ function buildPrintableReport() {
         <div class="rpt-student-cell">
             <div class="rpt-cell-label">Course</div>
             <div class="rpt-cell-value">${escapeHtml(deptLabel)}</div>
+        </div>
+        <div class="rpt-student-cell" style="border-right:none;background:#f0f7ff;">
+            <div class="rpt-cell-label">Total CGPA</div>
+            <div class="rpt-cell-value" style="font-size:19px;font-family:'JetBrains Mono','Courier New',monospace;color:${cgpaColor};">${cgpaDisplay}</div>
+            ${cgpa !== null ? `<div style="font-size:8.5px;font-weight:700;color:${cgpaColor};margin-top:2px;">${cgpaClass}</div>` : ''}
         </div>
     </div>
 
@@ -4391,9 +4663,7 @@ function buildPrintableReport() {
     `;
 }
 
-// ============================================================
-// MARK SHEET REPORT — Subject-wise grades per semester
-// ============================================================
+
 function buildMarkSheetReport() {
     const dept      = deptSelect.value;
     const deptLabel = getDeptLabel(dept);
@@ -4403,6 +4673,10 @@ function buildMarkSheetReport() {
 
     const studentName  = escapeHtml(currentStudentName  || '—');
     const studentRegNo = escapeHtml(currentStudentRegNo || '—');
+    const _msPhotoData = getStudentPhoto(currentStudentRegNo || '');
+    const _msPhotoHtml = _msPhotoData
+        ? `<img class="rpt-passport-photo" src="${_msPhotoData}" alt="Passport Photo">`
+        : `<div class="rpt-passport-placeholder">Passport<br>Photo</div>`;
 
     const draft = loadDraft();
 
@@ -4446,7 +4720,6 @@ function buildMarkSheetReport() {
                     ? `<span style="color:#991b1b;font-weight:700;">FAIL</span>`
                     : `<span style="color:#065f46;font-weight:700;">PASS</span>`);
 
-            // Always count every subject towards max GP (including ASC pending)
             semMaxGP += 10;
             if (!isPending && gp !== null) {
                 semCredits  += credits;
@@ -4467,15 +4740,12 @@ function buildMarkSheetReport() {
             semSubCount++;
         });
 
-        // Always use the saved GPA (as entered/calculated by the student) for display
-        // This ensures the marksheet GPA matches exactly what the student saved
         const savedGpa = gpa; // from sem${semNum}Gpa input field
         const calcGpa  = savedGpa.toFixed(2);
         const gpaBg    = gradeBgColor(savedGpa);
         const gpaFg    = gradeTextColor(savedGpa);
         const gpaLbl   = savedGpa >= 8.5 ? 'First Class with Distinction' : savedGpa >= 6.5 ? 'First Class' : 'Second Class';
 
-        // Use saved GPA × total sem credits for accurate CGPA accumulation
         const totalSemCr = getSemesterCredits(semNum);
         grandCredits += totalSemCr;
         grandGP      += savedGpa * totalSemCr;
@@ -4527,9 +4797,9 @@ function buildMarkSheetReport() {
         <div class="rpt-header">
         <div class="rpt-header-top">
             <div class="rpt-logo-wrap">
-                <img src="srptc.png" class="rpt-logo-img" alt="Sriram Polytechnic"
-                     onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-                <div class="rpt-logo-fallback" style="display:none;">🏛️</div>
+                <img src="${LOGO_DATA_URL || 'srptc.png'}" class="rpt-logo-img" alt="Sriram Polytechnic"
+                     >
+                <div class="rpt-logo-fallback" style="display:none;">SPC</div>
             </div>
             <div class="rpt-college-info">
                 <div class="rpt-college-name">Sriram Polytechnic College</div>
@@ -4548,10 +4818,10 @@ function buildMarkSheetReport() {
         </div>
     </div>
 
-    <div class="rpt-student-box" style="grid-template-columns:1fr 1fr 1fr 1fr;">
-        <div class="rpt-student-cell">
-            <div class="rpt-cell-label">Student Name</div>
-            <div class="rpt-cell-value">${studentName}</div>
+    <div class="rpt-student-box" style="grid-template-columns:1.4fr 1fr 1fr 0.8fr;">
+        <div class="rpt-student-cell" style="flex-direction:row;gap:10px;">
+            ${_msPhotoHtml}
+            <div style="text-align:center;"><div class="rpt-cell-label">Student Name</div><div class="rpt-cell-value">${studentName}</div></div>
         </div>
         <div class="rpt-student-cell">
             <div class="rpt-cell-label">Register Number</div>
@@ -4561,9 +4831,10 @@ function buildMarkSheetReport() {
             <div class="rpt-cell-label">Course</div>
             <div class="rpt-cell-value">${escapeHtml(deptLabel)}</div>
         </div>
-        <div class="rpt-student-cell" style="border-right:none;">
-            <div class="rpt-cell-label">CGPA / Class</div>
-            <div class="rpt-cell-value" style="font-family:'JetBrains Mono','Courier New',monospace;color:#1a4a8a;">${cgpa} &nbsp;<span style="font-size:9px;font-weight:600;color:#64748b;">${cgpaClass}</span></div>
+        <div class="rpt-student-cell" style="border-right:none;background:#f0f7ff;">
+            <div class="rpt-cell-label">Total CGPA</div>
+            <div class="rpt-cell-value" style="font-size:19px;font-family:'JetBrains Mono','Courier New',monospace;color:${cgpa !== '—' ? (parseFloat(cgpa) >= 8.5 ? '#065f46' : parseFloat(cgpa) >= 6.5 ? '#1a4a8a' : '#92400e') : '#64748b'};">${cgpa}</div>
+            <div style="font-size:8.5px;font-weight:700;color:${cgpa !== '—' ? (parseFloat(cgpa) >= 8.5 ? '#065f46' : parseFloat(cgpa) >= 6.5 ? '#1a4a8a' : '#92400e') : '#64748b'};margin-top:2px;">${cgpaClass}</div>
         </div>
     </div>
 
@@ -4622,23 +4893,23 @@ function buildMarkSheetReport() {
 }
 
 function injectWatermarks() {
+    var logoSrc = LOGO_DATA_URL || document.querySelector('img.rpt-logo-img') && document.querySelector('img.rpt-logo-img').src || 'srptc.png';
+
     const wmStampHTML = `
         <div class="rpt-wm-stamp">
-            <img src="srptc.png" alt="Watermark">
+            <img src="${logoSrc}" alt="Watermark" style="width:200px;height:200px;object-fit:contain;display:block;opacity:0.12;">
             <div class="wm-name">Sriram Polytechnic College</div>
         </div>`;
     const wmPageHTML = `
         <div class="rpt-page-wm">
-            <img src="srptc.png" alt="Watermark">
+            <img src="${logoSrc}" alt="Watermark" style="width:300px;height:300px;object-fit:contain;display:block;opacity:0.10;">
             <div class="wm-name">Sriram Polytechnic College</div>
         </div>`;
 
-    // Marksheet: inject into every semester block
     document.querySelectorAll('#rptPageMarksheet .rpt-ms-wrap').forEach(wrap => {
         wrap.insertAdjacentHTML('beforeend', wmStampHTML);
     });
 
-    // Academic report: inject one large watermark into the main content container
     const academic = document.getElementById('rptPageAcademic');
     if (academic) {
         academic.style.position = 'relative';
@@ -4647,20 +4918,16 @@ function injectWatermarks() {
 }
 
 function openPrintPreview(mode) {
-    // mode: 'academic' or 'marksheet'
     const academic  = document.getElementById('rptPageAcademic');
     const marksheet = document.getElementById('rptPageMarksheet');
     const tabA = document.getElementById('tabAcademicBtn');
     const tabM = document.getElementById('tabMarksheetBtn');
 
-    // Always build both pages fresh
     academic.innerHTML  = buildPrintableReport();
     marksheet.innerHTML = buildMarkSheetReport();
 
-    // Inject watermarks into every block
     injectWatermarks();
 
-    // Set active tab
     const showMs = (mode === 'marksheet');
     academic.classList.toggle('rpt-active',  !showMs);
     marksheet.classList.toggle('rpt-active',  showMs);
@@ -4683,20 +4950,71 @@ function getActivePrintPage() {
 }
 
 function triggerPrint() {
-    const printContent = getActivePrintPage();
-    const wrapper = document.createElement('div');
-    wrapper.id = 'printRoot';
-    wrapper.style.cssText = 'position:fixed;inset:0;background:white;z-index:99999;padding:1cm;font-family:Sora,sans-serif;color:#1a202c;overflow:auto;';
-    const clone = printContent.cloneNode(true);
-    wrapper.appendChild(clone);
-    document.body.appendChild(wrapper);
-    window.print();
-    wrapper.remove();
+    var printContent = getActivePrintPage();
+    var clone = printContent.cloneNode(true);
+
+    /* Fix image sources */
+    clone.querySelectorAll('img').forEach(function(img) {
+        var bestLogo = LOGO_DATA_URL || '';
+        if (bestLogo && (
+            img.classList.contains('rpt-logo-img') ||
+            img.alt === 'Watermark' ||
+            img.alt === 'Sriram Polytechnic' ||
+            img.alt === 'Sriram Polytechnic College')) {
+            img.src = bestLogo;
+        }
+        var src = img.getAttribute('src') || '';
+        if (src && !src.startsWith('data:')) {
+            try { img.setAttribute('src', new URL(src, window.location.href).href); } catch(e) {}
+        }
+    });
+
+    /* Collect all inline styles */
+    var cssText = Array.from(document.querySelectorAll('style'))
+        .map(function(s) { return s.textContent; }).join('\n');
+
+    /* Create an isolated iframe for printing — no popup, no blocked window */
+    var iframe = document.createElement('iframe');
+    iframe.setAttribute('aria-hidden', 'true');
+    iframe.style.cssText = 'position:fixed;top:0;left:-9999px;width:1px;height:1px;border:0;';
+    document.body.appendChild(iframe);
+
+    var iDoc = iframe.contentDocument || iframe.contentWindow.document;
+    iDoc.open();
+    iDoc.write(
+        '<!DOCTYPE html><html><head><meta charset="UTF-8">'
+        + '<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">'
+        + '<style>' + cssText + '</style>'
+        + '<style>'
+        + 'body{margin:0;padding:0;background:white;font-family:Sora,Arial,sans-serif;color:#1a202c;}'
+        + '#printRoot{width:794px;margin:0 auto;padding:20px 28px;box-sizing:border-box;background:white;}'
+        + '@page{size:A4 portrait;margin:10mm;}'
+        + '@media print{'
+        + '  body{margin:0;padding:0;-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}'
+        + '  #printRoot{width:100% !important;padding:0 !important;margin:0 !important;display:block !important;overflow:visible !important;}'
+        + '  *{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}'
+        + '}'
+        + '</style>'
+        + '</head><body><div id="printRoot"></div></body></html>'
+    );
+    iDoc.close();
+    iDoc.getElementById('printRoot').appendChild(clone);
+
+    setTimeout(function() {
+        try {
+            iframe.contentWindow.focus();
+            iframe.contentWindow.print();
+        } catch(e) {
+            window.print();
+        }
+        /* Remove iframe after printing (give dialog time to open) */
+        setTimeout(function() {
+            if (document.body.contains(iframe)) document.body.removeChild(iframe);
+        }, 3000);
+    }, 800);
 }
 
-// ============================================================
-// TOAST HELPER
-// ============================================================
+
 function showPdfToast(msg, type) {
     var t = document.getElementById('pdfToast');
     t.textContent = msg;
@@ -4705,135 +5023,485 @@ function showPdfToast(msg, type) {
     t._timer = setTimeout(function() { t.className = ''; }, 3500);
 }
 
-// ============================================================
-// SAVE AS PDF — Captures exactly what is shown in the preview
-// ============================================================
+
+function openPrintFallback(isMarksheet) {
+    var printContent = document.getElementById('printableContent');
+    var clone = printContent.cloneNode(true);
+    var academicClone  = clone.querySelector('#rptPageAcademic');
+    var marksheetClone = clone.querySelector('#rptPageMarksheet');
+    if (academicClone)  academicClone.style.display  = isMarksheet ? 'none'  : 'block';
+    if (marksheetClone) marksheetClone.style.display = isMarksheet ? 'block' : 'none';
+    if (LOGO_DATA_URL) {
+        clone.querySelectorAll('img.rpt-logo-img, img[alt="Watermark"], img[alt="Sriram Polytechnic"], img[alt="Sriram Polytechnic College"]').forEach(function(img) {
+            img.src = LOGO_DATA_URL;
+        });
+    }
+    var cssText = '';
+    Array.from(document.querySelectorAll('style')).forEach(function(s) { cssText += s.textContent + '\n'; });
+    var printWin = window.open('', '_blank', 'width=900,height=750');
+    if (!printWin) {
+        alert('Pop-ups are blocked. Please allow pop-ups or use the Print button and choose "Save as PDF".');
+        return;
+    }
+    printWin.document.write(
+        '<!DOCTYPE html><html><head><meta charset="UTF-8">'
+        + '<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">'
+        + '<style>' + cssText + '</style>'
+        + '<style>body{margin:0;padding:0;background:white;}#printableContent{width:794px;max-width:794px;margin:0 auto;overflow:visible;}'
+        + '@media print{@page{size:A4 portrait;margin:10mm;}*{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}}'
+        + '</style></head><body><div id="printableContent"></div>'
+        + '<script>window.addEventListener("load",function(){setTimeout(function(){window.print();window.onafterprint=function(){window.close();};},800);});<\/script>'
+        + '</body></html>'
+    );
+    printWin.document.close();
+    printWin.document.getElementById('printableContent').appendChild(clone);
+    showPdfToast('🖨️ Print dialog opened — choose "Save as PDF"', 'success');
+}
+
+
+/* ── helper: resolve jsPDF constructor across all UMD naming variants ── */
+function _getJsPDF() {
+    var candidates = [
+        window.jspdf    && window.jspdf.jsPDF,
+        window.jsPDF    && window.jsPDF.jsPDF,
+        window.jsPDFLib && window.jsPDFLib.jsPDF,
+        typeof window.jsPDF    === 'function' && window.jsPDF,
+        typeof window.jsPDFLib === 'function' && window.jsPDFLib
+    ];
+    for (var i = 0; i < candidates.length; i++) {
+        if (typeof candidates[i] === 'function') return candidates[i];
+    }
+    return null;
+}
+
+/* ── force-inject a script tag and resolve when loaded ── */
+function _loadScriptPromise(src) {
+    return new Promise(function(resolve, reject) {
+        /* skip if already loaded */
+        if (document.querySelector('script[src="' + src + '"]')) { resolve(); return; }
+        var s = document.createElement('script');
+        s.src = src;
+        s.onload  = resolve;
+        s.onerror = reject;
+        document.head.appendChild(s);
+    });
+}
+
+/* ── ensure both libs are loaded, trying multiple CDNs ── */
+function _ensurePdfLibs() {
+    var jspdfCdns = [
+        'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+        'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js',
+        'https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js'
+    ];
+    var h2cCdns = [
+        'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
+        'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js',
+        'https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js'
+    ];
+
+    function loadWithFallback(cdns, checkFn) {
+        return cdns.reduce(function(chain, src) {
+            return chain.catch(function() {
+                return _loadScriptPromise(src).then(function() {
+                    if (!checkFn()) throw new Error('lib check failed after ' + src);
+                });
+            });
+        }, Promise.reject(new Error('start')));
+    }
+
+    var jspdfReady  = _getJsPDF()  ? Promise.resolve() : loadWithFallback(jspdfCdns,  _getJsPDF);
+    var h2cReady    = (typeof html2canvas === 'function') ? Promise.resolve() : loadWithFallback(h2cCdns, function() { return typeof html2canvas === 'function'; });
+
+    return Promise.all([jspdfReady, h2cReady]);
+}
+
 function triggerSaveAsPdf() {
+    var activePage   = getActivePrintPage();
     var studentName  = (currentStudentName  || 'Student').replace(/\s+/g, '_');
     var studentRegNo = (currentStudentRegNo || 'REG').replace(/\s+/g, '_');
-
-    var activePage  = getActivePrintPage();
-    var isMarksheet = activePage.id === 'rptPageMarksheet';
-    var fileName    = isMarksheet
-        ? 'MarkSheet_'     + studentName + '_' + studentRegNo + '.pdf'
+    var isMarksheet  = activePage.id === 'rptPageMarksheet';
+    var fileName     = isMarksheet
+        ? 'MarkSheet_'      + studentName + '_' + studentRegNo + '.pdf'
         : 'AcademicReport_' + studentName + '_' + studentRegNo + '.pdf';
 
     var btn = document.getElementById('doSavePdfBtn');
     var origText = btn.innerHTML;
-    btn.innerHTML = '<span class="pdf-spinner"></span> Generating…';
+    btn.innerHTML = '<span class="pdf-spinner"></span> Generating PDF…';
     btn.disabled  = true;
 
-    // ── Strategy: render #printableContent directly.
-    //    It already has all CSS applied (it IS the preview).
-    //    We just temporarily force both tab pages to display:block
-    //    so html2canvas sees the active one, then restore after.
-    var printable   = document.getElementById('printableContent');
-    var pageAcademic  = document.getElementById('rptPageAcademic');
-    var pageMarksheet = document.getElementById('rptPageMarksheet');
-
-    // Save original display states
-    var prevAcademic  = pageAcademic.style.display;
-    var prevMarksheet = pageMarksheet.style.display;
-
-    // Force the active page visible, hide the other
-    if (isMarksheet) {
-        pageMarksheet.style.setProperty('display', 'block', 'important');
-        pageAcademic.style.setProperty('display',  'none',  'important');
-    } else {
-        pageAcademic.style.setProperty('display',  'block', 'important');
-        pageMarksheet.style.setProperty('display', 'none',  'important');
+    function finish(ok, errMsg) {
+        btn.innerHTML = origText;
+        btn.disabled  = false;
+        showPdfToast(
+            ok ? '✅ PDF downloaded successfully!' : ('❌ ' + (errMsg || 'PDF generation failed. Try again.')),
+            ok ? 'success' : 'error'
+        );
     }
 
-    // Also ensure printableContent itself is visible
-    var prevPrintable = printable.style.cssText;
-    printable.style.cssText = 'display:block !important; background:white; width:718px; max-width:718px; margin:0 !important; padding:24px 28px; box-sizing:border-box; overflow:hidden !important; max-height:none !important; height:auto !important;';
-
-    var opt = {
-        margin:      [10, 10, 10, 10],
-        filename:    fileName,
-        image:       { type: 'png', quality: 1.0 },
-        html2canvas: {
-            scale:           3,
-            useCORS:         true,
-            allowTaint:      true,
-            logging:         false,
-            backgroundColor: '#ffffff',
-            scrollX:         0,
-            scrollY:         0,
-            onclone: function(clonedDoc) {
-                var hideIds = ['globalCollegeHeader','landingPage','mainApp','pdfToast'];
-                hideIds.forEach(function(id) {
-                    var el = clonedDoc.getElementById(id);
-                    if (el) el.style.cssText = 'display:none !important;';
-                });
-
-                var clonedActive = clonedDoc.getElementById(
-                    isMarksheet ? 'rptPageMarksheet' : 'rptPageAcademic'
-                );
-                var clonedOther = clonedDoc.getElementById(
-                    isMarksheet ? 'rptPageAcademic' : 'rptPageMarksheet'
-                );
-                if (clonedActive) clonedActive.style.cssText = 'display:block !important; overflow:visible !important; max-height:none !important; height:auto !important;';
-                if (clonedOther)  clonedOther.style.cssText  = 'display:none !important;';
-
-                var overlay = clonedDoc.getElementById('printOverlay');
-                if (overlay) overlay.style.cssText = 'position:static !important; background:transparent !important; overflow:visible !important; display:block !important; max-height:none !important; height:auto !important; padding:0 !important;';
-
-                var previewBox = clonedDoc.getElementById('printPreviewBox');
-                if (previewBox) previewBox.style.cssText = 'max-width:718px !important; width:718px !important; padding:0 !important; margin:0 auto !important; border-radius:0 !important; box-shadow:none !important; background:white !important; overflow:visible !important; max-height:none !important; height:auto !important; position:static !important;';
-
-                var actionBar = clonedDoc.querySelector('.print-action-bar');
-                if (actionBar) actionBar.style.display = 'none';
-
-                var clonedPrintable = clonedDoc.getElementById('printableContent');
-                if (clonedPrintable) clonedPrintable.style.cssText = 'display:block !important; background:white !important; width:718px !important; max-width:718px !important; margin:0 !important; padding:24px 28px !important; box-sizing:border-box !important; overflow:visible !important; max-height:none !important; height:auto !important;';
-
-                var el = clonedPrintable ? clonedPrintable.parentElement : null;
-                while (el && el !== clonedDoc.body) {
-                    el.style.cssText = 'overflow:visible !important; max-height:none !important; height:auto !important; position:static !important; background:white !important; width:auto !important;';
-                    el = el.parentElement;
-                }
-                clonedDoc.body.style.cssText = 'overflow:visible !important; max-height:none !important; height:auto !important; margin:0 !important; padding:0 !important; background:white !important;';
-                clonedDoc.documentElement.style.cssText = 'overflow:visible !important; max-height:none !important; height:auto !important;';
-            }
-        },
-        jsPDF: {
-            unit:        'mm',
-            format:      'a4',
-            orientation: 'portrait',
-            compress:    false
-        },
-        pagebreak: { mode: ['css', 'legacy'], avoid: ['.rpt-ms-wrap', 'tr', '.rpt-cgpa-box', '.rpt-footer', '.rpt-student-box', '.rpt-header'] }
-    };
-
-    function restore() {
-        pageAcademic.style.display  = prevAcademic;
-        pageMarksheet.style.display = prevMarksheet;
-        printable.style.cssText     = prevPrintable;
+    /* --- Step 1: ensure libs are available (with retry) --- */
+    function waitForLibs(attempts, cb) {
+        var jspdfOk = !!_getJsPDF();
+        var h2cOk   = typeof html2canvas === 'function';
+        if (jspdfOk && h2cOk) { cb(true); return; }
+        if (attempts <= 0)    { cb(false); return; }
+        setTimeout(function() { waitForLibs(attempts - 1, cb); }, 600);
     }
 
-    html2pdf()
-        .set(opt)
-        .from(printable)
-        .save()
-        .then(function() {
-            restore();
-            btn.innerHTML = origText;
-            btn.disabled  = false;
-            showPdfToast('✅ PDF saved successfully!', 'success');
-        })
-        .catch(function(err) {
-            console.error('PDF error:', err);
-            restore();
-            btn.innerHTML = origText;
-            btn.disabled  = false;
-            showPdfToast('❌ PDF generation failed. Please try again.', 'error');
-        });
+    /* kick off a fresh load attempt regardless */
+    _ensurePdfLibs().catch(function(){});
+
+    waitForLibs(8, function(libsReady) {
+        if (!libsReady) {
+            finish(false, 'PDF libraries failed to load. Check your internet connection.');
+            return;
+        }
+        _doGeneratePdf(activePage, fileName, finish);
+    });
 }
 
-// ============================================================
-// INIT
-// ============================================================
+function _doGeneratePdf(activePage, fileName, finish) {
+    var bestLogo  = LOGO_DATA_URL || '';
+    var isMarksheet = activePage.id === 'rptPageMarksheet';
+
+    /* Fix all image sources on the clone */
+    function fixImages(el) {
+        el.querySelectorAll('img').forEach(function(img) {
+            if (bestLogo && (
+                img.classList.contains('rpt-logo-img') ||
+                img.alt === 'Watermark' ||
+                img.alt === 'Sriram Polytechnic' ||
+                img.alt === 'Sriram Polytechnic College')) {
+                img.src = bestLogo;
+            }
+            var src = img.getAttribute('src') || '';
+            if (src && !src.startsWith('data:') && !src.startsWith('http')) {
+                try { img.setAttribute('src', new URL(src, window.location.href).href); } catch(e) {}
+            }
+        });
+    }
+
+    /* ── For Marksheet: split into per-semester pages ── */
+    if (isMarksheet) {
+        var semWrapEls = activePage.querySelectorAll('.rpt-ms-wrap');
+        if (semWrapEls.length === 0) {
+            /* fallback: no semester blocks found, render whole page */
+            return _doGeneratePdfFull(activePage, fileName, finish, bestLogo);
+        }
+
+        /* Collect: header block, student box, section title, each sem wrap, summary, formula, footer */
+        var headerEl      = activePage.querySelector('.rpt-header');
+        var studentBoxEl  = activePage.querySelector('.rpt-student-box');
+        var sectionTitleEl= activePage.querySelector('.rpt-section-title');
+        var summaryEl     = activePage.querySelector('.rpt-ms-wrap + div, .rpt-formula');
+        var formulaEl     = activePage.querySelector('.rpt-formula');
+        var footerEl      = activePage.querySelector('.rpt-footer');
+
+        /* Build a shared "top strip" (header + student box) HTML to repeat on each page */
+        function buildTopStrip() {
+            var strip = document.createElement('div');
+            strip.style.cssText = 'width:794px;background:#ffffff;box-sizing:border-box;padding:18px 24px 0;font-family:Sora,Arial,sans-serif;color:#1a202c;';
+            var stylesCopy = document.createElement('style');
+            stylesCopy.textContent = Array.from(document.querySelectorAll('style')).map(function(s){return s.textContent;}).join('\n');
+            strip.appendChild(stylesCopy);
+            if (headerEl)      strip.appendChild(headerEl.cloneNode(true));
+            if (studentBoxEl)  strip.appendChild(studentBoxEl.cloneNode(true));
+            if (sectionTitleEl){ var st = sectionTitleEl.cloneNode(true); st.style.marginTop='8px'; strip.appendChild(st); }
+            fixImages(strip);
+            return strip;
+        }
+
+        var JsPDF = _getJsPDF();
+        if (!JsPDF) { finish(false, 'jsPDF library failed to load.'); return; }
+
+        var pdf    = new JsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+        var pageW  = pdf.internal.pageSize.getWidth();
+        var pageH  = pdf.internal.pageSize.getHeight();
+        var margin = 8;
+        var printW = pageW - margin * 2;
+        var printH = pageH - margin * 2;
+
+        var semArray = Array.from(semWrapEls);
+        var pageIndex = 0;
+
+        function renderOnePage(semEls, isLastPage, doneCb) {
+            var container = document.createElement('div');
+            container.setAttribute('aria-hidden', 'true');
+            container.style.cssText = [
+                'position:absolute','top:0','left:-9999px',
+                'width:794px','min-width:794px','max-width:794px',
+                'background:#ffffff','overflow:visible',
+                'padding:18px 24px 12px','box-sizing:border-box',
+                'font-family:Sora,Arial,sans-serif','color:#1a202c','z-index:-999'
+            ].join(';');
+
+            var stylesCopy = document.createElement('style');
+            stylesCopy.textContent = Array.from(document.querySelectorAll('style')).map(function(s){return s.textContent;}).join('\n');
+            container.appendChild(stylesCopy);
+
+            /* Add header strip on first page only to save space on subsequent pages */
+            if (pageIndex === 0) {
+                if (headerEl)     container.appendChild(headerEl.cloneNode(true));
+                if (studentBoxEl) container.appendChild(studentBoxEl.cloneNode(true));
+                if (sectionTitleEl) { var st = sectionTitleEl.cloneNode(true); st.style.marginTop='8px'; container.appendChild(st); }
+            } else {
+                /* Compact header repeat for continuation pages */
+                var miniHdr = document.createElement('div');
+                miniHdr.style.cssText = 'border-bottom:2px solid #1a4a8a;padding-bottom:6px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;';
+                miniHdr.innerHTML = '<div style="font-size:11px;font-weight:800;color:#1a4a8a;text-transform:uppercase;letter-spacing:0.05em;">Sriram Polytechnic College — Student Mark Sheet (Continued)</div>'
+                    + '<div style="font-size:9px;color:#64748b;">' + (activePage.querySelector('.rpt-cell-value') ? activePage.querySelector('.rpt-student-box .rpt-student-cell:nth-child(2) .rpt-cell-value') && activePage.querySelector('.rpt-student-box .rpt-student-cell:nth-child(2) .rpt-cell-value').textContent || '' : '') + '</div>';
+                container.appendChild(miniHdr);
+            }
+
+            semEls.forEach(function(el) {
+                container.appendChild(el.cloneNode(true));
+            });
+
+            /* On last page add summary + formula + footer */
+            if (isLastPage) {
+                /* Summary bar */
+                var allChildren = Array.from(activePage.children);
+                allChildren.forEach(function(ch) {
+                    if (!ch.classList.contains('rpt-header') &&
+                        !ch.classList.contains('rpt-student-box') &&
+                        !ch.classList.contains('rpt-section-title') &&
+                        !ch.classList.contains('rpt-ms-wrap') &&
+                        !ch.classList.contains('rpt-footer')) {
+                        container.appendChild(ch.cloneNode(true));
+                    }
+                });
+                if (footerEl) container.appendChild(footerEl.cloneNode(true));
+            }
+
+            fixImages(container);
+            document.body.appendChild(container);
+
+            requestAnimationFrame(function(){ requestAnimationFrame(function(){
+                var captureH = Math.max(container.scrollHeight, container.offsetHeight, 400);
+                html2canvas(container, {
+                    scale: 3,
+                    useCORS: true,
+                    allowTaint: false,
+                    logging: false,
+                    backgroundColor: '#ffffff',
+                    scrollX: 0, scrollY: 0,
+                    x: 0, y: 0,
+                    width: 794,
+                    height: captureH,
+                    imageTimeout: 20000,
+                    onclone: function(clonedDoc, clonedEl) {
+                        clonedEl.style.cssText = 'position:relative;left:0;top:0;width:794px;max-width:794px;overflow:visible;background:#ffffff;';
+                        /* Keep fonts loaded */
+                        if (bestLogo) {
+                            clonedEl.querySelectorAll('img').forEach(function(img) {
+                                if (img.classList.contains('rpt-logo-img') || img.alt === 'Watermark' ||
+                                    img.alt === 'Sriram Polytechnic' || img.alt === 'Sriram Polytechnic College') {
+                                    img.src = bestLogo;
+                                }
+                            });
+                        }
+                    }
+                }).then(function(canvas) {
+                    if (document.body.contains(container)) document.body.removeChild(container);
+                    /* Fit canvas onto ONE A4 page; if it overflows, scale to fit */
+                    var imgW    = canvas.width;
+                    var imgH    = canvas.height;
+                    var pxPerMm = imgW / printW;
+                    var renderedMM = imgH / pxPerMm;
+
+                    if (pageIndex > 0) pdf.addPage();
+
+                    if (renderedMM <= printH) {
+                        /* Fits on one page — add as-is */
+                        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', margin, margin, printW, renderedMM);
+                    } else {
+                        /* Scale down to fit: rare case if a single semester is too tall */
+                        var scale = printH / renderedMM;
+                        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', margin, margin, printW * scale, printH);
+                    }
+                    pageIndex++;
+                    doneCb(null);
+                }).catch(function(err) {
+                    if (document.body.contains(container)) document.body.removeChild(container);
+                    doneCb(err);
+                });
+            });});
+        }
+
+        /* Decide grouping: 2 semesters per page to keep pages reasonable */
+        var groups = [];
+        for (var g = 0; g < semArray.length; g += 2) {
+            groups.push(semArray.slice(g, g + 2));
+        }
+
+        function processGroup(idx) {
+            if (idx >= groups.length) {
+                pdf.save(fileName);
+                finish(true);
+                return;
+            }
+            var isLast = (idx === groups.length - 1);
+            renderOnePage(groups[idx], isLast, function(err) {
+                if (err) { finish(false, 'Page capture failed on page ' + (idx+1)); return; }
+                processGroup(idx + 1);
+            });
+        }
+        processGroup(0);
+        return;
+    }
+
+    /* ── Non-marksheet (Academic Report): render as one tall canvas ── */
+    _doGeneratePdfFull(activePage, fileName, finish, bestLogo);
+}
+
+function _doGeneratePdfFull(activePage, fileName, finish, bestLogo) {
+    var pageClone = activePage.cloneNode(true);
+
+    /* Fix all image sources on the clone */
+    pageClone.querySelectorAll('img').forEach(function(img) {
+        if (bestLogo && (
+            img.classList.contains('rpt-logo-img') ||
+            img.alt === 'Watermark' ||
+            img.alt === 'Sriram Polytechnic' ||
+            img.alt === 'Sriram Polytechnic College')) {
+            img.src = bestLogo;
+        }
+        var src = img.getAttribute('src') || '';
+        if (src && !src.startsWith('data:') && !src.startsWith('http')) {
+            try { img.setAttribute('src', new URL(src, window.location.href).href); } catch(e) {}
+        }
+    });
+
+    /* Build an off-screen render container (absolutely positioned off-viewport) */
+    var offscreen = document.createElement('div');
+    offscreen.setAttribute('aria-hidden', 'true');
+    offscreen.style.cssText = [
+        'position:absolute',
+        'top:0',
+        'left:-9999px',
+        'width:794px',
+        'min-width:794px',
+        'max-width:794px',
+        'background:#ffffff',
+        'overflow:visible',
+        'padding:24px 28px',
+        'box-sizing:border-box',
+        'font-family:Sora,Arial,sans-serif',
+        'color:#1a202c',
+        'z-index:-999'
+    ].join(';');
+
+    /* Inject all page styles so the clone renders correctly */
+    var stylesCopy = document.createElement('style');
+    stylesCopy.textContent = Array.from(document.querySelectorAll('style'))
+        .map(function(s) { return s.textContent; }).join('\n');
+    offscreen.appendChild(stylesCopy);
+    offscreen.appendChild(pageClone);
+    document.body.appendChild(offscreen);
+
+    /* Wait two animation frames so layout is complete before measuring */
+    requestAnimationFrame(function() { requestAnimationFrame(function() {
+        var captureH = Math.max(offscreen.scrollHeight, offscreen.offsetHeight, 400);
+
+        html2canvas(offscreen, {
+            scale: 3,
+            useCORS: true,
+            allowTaint: false,
+            logging: false,
+            backgroundColor: '#ffffff',
+            scrollX: 0,
+            scrollY: 0,
+            x: 0,
+            y: 0,
+            width: 794,
+            height: captureH,
+            imageTimeout: 20000,
+            onclone: function(clonedDoc, clonedEl) {
+                /* Normalise position so html2canvas captures correctly */
+                clonedEl.style.cssText = [
+                    'position:relative',
+                    'left:0',
+                    'top:0',
+                    'width:794px',
+                    'max-width:794px',
+                    'overflow:visible',
+                    'background:#ffffff'
+                ].join(';');
+                /* Keep external font links — removing them causes font fallback
+                   which breaks letter-spacing and word-spacing in the captured image.
+                   html2canvas will use whatever fonts the browser has already loaded. */
+                /* Re-apply logo to any remaining img tags */
+                if (bestLogo) {
+                    clonedEl.querySelectorAll('img').forEach(function(img) {
+                        if (img.classList.contains('rpt-logo-img') ||
+                            img.alt === 'Watermark' ||
+                            img.alt === 'Sriram Polytechnic' ||
+                            img.alt === 'Sriram Polytechnic College') {
+                            img.src = bestLogo;
+                        }
+                    });
+                }
+            }
+        }).then(function(canvas) {
+            /* Remove the off-screen element as soon as capture is done */
+            if (document.body.contains(offscreen)) document.body.removeChild(offscreen);
+
+            try {
+                var JsPDF = _getJsPDF();
+                if (!JsPDF) throw new Error('jsPDF constructor not found');
+
+                /* A4 dimensions: 210 × 297 mm */
+                var pdf    = new JsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+                var pageW  = pdf.internal.pageSize.getWidth();   // 210
+                var pageH  = pdf.internal.pageSize.getHeight();  // 297
+                var margin = 8;  /* mm on each side */
+                var printW = pageW - margin * 2;
+                var printH = pageH - margin * 2;
+
+                var imgW    = canvas.width;
+                var imgH    = canvas.height;
+                var pxPerMm = imgW / printW;
+                var pageHpx = printH * pxPerMm;
+                var pages   = Math.ceil(imgH / pageHpx);
+
+                for (var p = 0; p < pages; p++) {
+                    if (p > 0) pdf.addPage();
+                    var srcY = p * pageHpx;
+                    var srcH = Math.min(pageHpx, imgH - srcY);
+
+                    /* Slice the canvas for this page */
+                    var slice   = document.createElement('canvas');
+                    slice.width  = imgW;
+                    slice.height = Math.ceil(srcH);
+                    slice.getContext('2d').drawImage(
+                        canvas, 0, srcY, imgW, srcH, 0, 0, imgW, Math.ceil(srcH)
+                    );
+                    pdf.addImage(
+                        slice.toDataURL('image/png'),
+                        'PNG',
+                        margin, margin,
+                        printW, srcH / pxPerMm
+                    );
+                }
+
+                /* pdf.save() triggers an immediate browser download — no print dialog */
+                pdf.save(fileName);
+                finish(true);
+
+            } catch(e) {
+                console.error('[CGPA PDF] jsPDF error:', e);
+                finish(false, 'PDF creation error: ' + e.message);
+            }
+
+        }).catch(function(err) {
+            if (document.body.contains(offscreen)) document.body.removeChild(offscreen);
+            console.error('[CGPA PDF] html2canvas error:', err);
+            finish(false, 'Page capture failed. Try again.');
+        });
+    }); });
+}
+
+
 function init() {
     loadStudentLogs();
 
@@ -4850,7 +5518,8 @@ function init() {
         document.getElementById('landingPage').style.display = 'none';
         document.getElementById('mainApp').style.display     = 'block';
 
-        // Restore draft
+        _sbPullPhoto(savedReg).then(() => updateStudentDisplay());
+
         restoreDraftGPAs();
         renderSubjects();
         updateSemesterCreditsDisplay();
@@ -4877,7 +5546,6 @@ function init() {
     document.getElementById('doSavePdfBtn').addEventListener('click', triggerSaveAsPdf);
     document.getElementById('closePrintBtn').addEventListener('click', closePrintPreview);
 
-    // Tab switchers inside preview
     document.getElementById('tabAcademicBtn').addEventListener('click', () => {
         document.getElementById('rptPageAcademic').classList.add('rpt-active');
         document.getElementById('rptPageMarksheet').classList.remove('rpt-active');
@@ -4910,19 +5578,19 @@ function init() {
     );
     document.getElementById('logoutStudentBtn').addEventListener('click', logoutStudent);
 
+    document.getElementById('uploadPhotoBtn').addEventListener('click', () => {
+        showPhotoUploadModal();
+    });
+
     for (let i = 1; i <= 6; i++) {
         document.getElementById(`sem${i}Gpa`).addEventListener('change', scheduleDraftSave);
     }
 }
 
-
 init();
 
-// ============================================================
-// FIRST-TIME USER TUTORIAL  (v2 — with animated screen previews)
-// ============================================================
+
 window.startTour = function() {
-    // Remove any existing tour elements before restarting
     ['tourBackdrop','tourSpotlight','tourCard','tourArrow','tourSkipAll'].forEach(function(id){
         var el = document.getElementById(id);
         if (el) el.remove();
@@ -4942,7 +5610,6 @@ function runTour() {
     ───────────────────────────────────────────────────────── */
     const screens = {
 
-        // Step 0 — Welcome splash
         welcome: `
         <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:10px;padding:8px;">
           <div style="font-size:2.6rem;animation:tsBounce 0.7s cubic-bezier(0.34,1.56,0.64,1) both;">🎓</div>
@@ -4958,7 +5625,6 @@ function runTour() {
           </div>
         </div>`,
 
-        // Step 1 — Role selection
         roles: `
         <div style="display:flex;flex-direction:column;gap:7px;padding:8px;height:100%;justify-content:center;">
           <div style="font-size:0.6rem;color:rgba(255,255,255,0.4);text-align:center;margin-bottom:2px;">Choose your role</div>
@@ -4994,7 +5660,65 @@ function runTour() {
         })();
         <\/script>`,
 
-        // Step 2 — Dept & Semester dropdowns
+        photo: `
+        <div style="display:flex;flex-direction:column;gap:7px;padding:8px;height:100%;justify-content:center;">
+          <div style="font-size:0.58rem;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:1px;">Passport Size Photo Upload</div>
+
+          <!-- Reason banner -->
+          <div style="background:rgba(245,158,11,0.10);border:1px solid rgba(245,158,11,0.3);border-radius:7px;padding:5px 8px;display:flex;align-items:flex-start;gap:5px;animation:tsSlideIn 0.4s 0.05s both;">
+            <span style="font-size:0.8rem;flex-shrink:0;">🪪</span>
+            <div>
+              <div style="font-size:0.52rem;font-weight:800;color:#fbbf24;margin-bottom:1px;">Why is this needed?</div>
+              <div style="font-size:0.48rem;color:rgba(255,255,255,0.55);line-height:1.5;">Your photo appears on the <strong style="color:white;">Academic Report</strong> &amp; <strong style="color:white;">Mark Sheet</strong> for official identification — just like a hall ticket.</div>
+            </div>
+          </div>
+
+          <!-- Upload zone mock -->
+          <div id="tsPhotoZone" style="border:1.5px dashed rgba(245,158,11,0.45);border-radius:9px;padding:8px 10px;display:flex;align-items:center;gap:8px;background:rgba(245,158,11,0.04);cursor:pointer;transition:all 0.3s;animation:tsSlideIn 0.4s 0.2s both;">
+            <div id="tsPhotoBox" style="width:38px;height:48px;border-radius:5px;background:rgba(255,255,255,0.07);border:1.5px dashed rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0;transition:all 0.5s;">📷</div>
+            <div style="flex:1;">
+              <div style="font-size:0.56rem;font-weight:700;color:#fbbf24;margin-bottom:1px;">Upload Passport Size Photo</div>
+              <div style="font-size:0.46rem;color:rgba(255,255,255,0.35);">JPG / PNG · Max 500 KB</div>
+              <div style="font-size:0.46rem;color:rgba(255,255,255,0.35);">3.5 × 4.5 cm format</div>
+              <div id="tsPhotoOptional" style="margin-top:3px;display:inline-block;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.25);border-radius:100px;padding:1px 6px;font-size:0.42rem;color:#fbbf24;font-weight:700;letter-spacing:0.04em;">OPTIONAL</div>
+            </div>
+          </div>
+
+          <!-- Uploaded state (animated) -->
+          <div id="tsPhotoUploaded" style="display:none;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);border-radius:7px;padding:5px 8px;font-size:0.52rem;color:#34d399;text-align:center;animation:tsSlideIn 0.4s both;">✅ Photo saved &amp; will appear on your reports</div>
+
+          <!-- Skip note -->
+          <div style="text-align:center;font-size:0.46rem;color:rgba(255,255,255,0.22);animation:tsFadeUp 0.4s 0.55s both;">You can also upload later using the <strong style="color:rgba(255,255,255,0.4);">📷 Photo</strong> button on your dashboard</div>
+        </div>
+        <script>
+        (function(){
+          var zone = document.getElementById('tsPhotoZone');
+          var box  = document.getElementById('tsPhotoBox');
+          var done = document.getElementById('tsPhotoUploaded');
+          if (!zone || !box || !done) return;
+          function runCycle() {
+            zone.style.borderColor = 'rgba(245,158,11,0.85)';
+            zone.style.background  = 'rgba(245,158,11,0.09)';
+            setTimeout(function() {
+              box.innerHTML = '<div style="width:38px;height:48px;border-radius:5px;background:linear-gradient(135deg,#1a4a8a,#0ea5e9);display:flex;align-items:center;justify-content:center;font-size:1rem;">👤</div>';
+              box.style.border = 'none';
+            }, 700);
+            setTimeout(function() {
+              done.style.display = 'block';
+            }, 1200);
+            setTimeout(function() {
+              done.style.display = 'none';
+              box.innerHTML = '📷';
+              box.style.cssText = 'width:38px;height:48px;border-radius:5px;background:rgba(255,255,255,0.07);border:1.5px dashed rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0;transition:all 0.5s;';
+              zone.style.borderColor = 'rgba(245,158,11,0.45)';
+              zone.style.background  = 'rgba(245,158,11,0.04)';
+            }, 2800);
+          }
+          setTimeout(runCycle, 600);
+          setInterval(runCycle, 3800);
+        })();
+        <\/script>`,
+
         dept: `
         <div style="display:flex;flex-direction:column;gap:7px;padding:8px;height:100%;justify-content:center;">
           <div style="font-size:0.58rem;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px;">Department & Semester</div>
@@ -5032,7 +5756,6 @@ function runTour() {
         })();
         <\/script>`,
 
-        // Step 3 — Grade entry table
         grades: `
         <div style="display:flex;flex-direction:column;gap:0;padding:8px;height:100%;justify-content:center;">
           <div style="font-size:0.58rem;color:rgba(255,255,255,0.4);margin-bottom:5px;text-transform:uppercase;letter-spacing:0.05em;">Enter Your Grades</div>
@@ -5057,7 +5780,6 @@ function runTour() {
               +'<span style="text-align:center;font-size:0.55rem;color:#fbbf24;">'+s[1]+'</span>'
               +'<div style="text-align:center;"><span id="tsG'+i+'" style="font-size:0.58rem;font-weight:800;padding:1px 5px;border-radius:100px;background:rgba(52,211,153,0.15);color:'+colors[s[2]]+';">'+s[2]+'</span></div>';
             container.appendChild(row);
-            // Animate grade cycling
             var gi=grades.indexOf(s[2]);
             setInterval(function(){
               gi=(gi+1)%grades.length;
@@ -5076,7 +5798,6 @@ function runTour() {
         })();
         <\/script>`,
 
-        // Step 4 — Calculate GPA button + result
         calcgpa: `
         <div style="display:flex;flex-direction:column;gap:7px;padding:8px;height:100%;justify-content:center;">
           <div style="font-size:0.58rem;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:2px;">GPA Calculation</div>
@@ -5110,7 +5831,6 @@ function runTour() {
         })();
         <\/script>`,
 
-        // Step 5 — CGPA panel
         cgpa: `
         <div style="display:flex;flex-direction:column;gap:6px;padding:8px;height:100%;justify-content:center;">
           <div style="font-size:0.58rem;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:1px;">All Semesters → CGPA</div>
@@ -5149,7 +5869,6 @@ function runTour() {
         })();
         <\/script>`,
 
-        // Step 6 — Print/PDF
         print: `
         <div style="display:flex;flex-direction:column;gap:6px;padding:8px;height:100%;justify-content:center;">
           <div style="font-size:0.58rem;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:1px;">Export Your Results</div>
@@ -5199,7 +5918,6 @@ function runTour() {
         })();
         <\/script>`,
 
-        // Step 7 — Done / auto-save
         done: `
         <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px;padding:8px;text-align:center;">
           <div style="font-size:2.5rem;animation:tsBounce 0.7s cubic-bezier(0.34,1.56,0.64,1) both;">🎉</div>
@@ -5217,12 +5935,13 @@ function runTour() {
 
     const steps = [
         { key:'welcome', title:'Welcome to CGPA Calculator!',    desc:'A quick visual guide to help you get started in under 60 seconds. Tap <strong>Next →</strong> to begin.', highlight:null, position:'center' },
-        { key:'roles',   title:'Step 1 — Choose Your Role',      desc:'Tap <strong>Student</strong> to log in with your name & register number. Or <strong>Admin</strong> to manage the system.', highlight:'.role-cards', position:'center' },
-        { key:'dept',    title:'Step 2 — Select Dept & Semester',desc:'Pick your <strong>Department</strong> and <strong>Semester</strong>. Subjects & credits load automatically.', highlight:null, position:'center' },
-        { key:'grades',  title:'Step 3 — Enter Your Grades',     desc:'Choose the <strong>Grade</strong> (O, A+, A, B+…) for each subject. Credits are pre-filled — just pick your grade!', highlight:null, position:'center' },
-        { key:'calcgpa', title:'Step 4 — Calculate GPA',         desc:'Hit <strong>Calculate GPA</strong> to get your semester result instantly, then <strong>Save</strong> it to your record.', highlight:null, position:'center' },
-        { key:'cgpa',    title:'Step 5 — Calculate CGPA',        desc:'Once you\'ve saved semester GPAs, press <strong>Calculate CGPA</strong> to see your overall result and classification.', highlight:null, position:'center' },
-        { key:'print',   title:'Step 6 — Export as PDF',         desc:'Use <strong>Print Report</strong> or <strong>Print Marksheet</strong> to download a beautiful official document.', highlight:null, position:'center' },
+        { key:'roles',   title:'Step 1 — Choose Your Role',      desc:'Tap <strong>Student</strong> to log in with your name &amp; register number. Or <strong>Admin</strong> to manage the system.', highlight:'.role-cards', position:'center' },
+        { key:'photo',   title:'Step 2 — Upload Your Photo <span style="font-size:0.7em;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.3);color:#fbbf24;padding:1px 7px;border-radius:100px;font-weight:600;letter-spacing:0.04em;vertical-align:middle;">OPTIONAL</span>', desc:'Add a <strong>passport-size photo</strong> for official identification — it appears on your <strong>Academic Report &amp; Mark Sheet</strong>, just like a hall ticket. You can skip or add it later.', highlight:null, position:'center' },
+        { key:'dept',    title:'Step 3 — Select Dept & Semester',desc:'Pick your <strong>Department</strong> and <strong>Semester</strong>. Subjects & credits load automatically.', highlight:null, position:'center' },
+        { key:'grades',  title:'Step 4 — Enter Your Grades',     desc:'Choose the <strong>Grade</strong> (O, A+, A, B+…) for each subject. Credits are pre-filled — just pick your grade!', highlight:null, position:'center' },
+        { key:'calcgpa', title:'Step 5 — Calculate GPA',         desc:'Hit <strong>Calculate GPA</strong> to get your semester result instantly, then <strong>Save</strong> it to your record.', highlight:null, position:'center' },
+        { key:'cgpa',    title:'Step 6 — Calculate CGPA',        desc:'Once you\'ve saved semester GPAs, press <strong>Calculate CGPA</strong> to see your overall result and classification.', highlight:null, position:'center' },
+        { key:'print',   title:'Step 7 — Export as PDF',         desc:'Use <strong>Print Report</strong> or <strong>Print Marksheet</strong> to download a beautiful official document with your photo.', highlight:null, position:'center' },
         { key:'done',    title:"You're all set! 🚀",             desc:'Your progress is auto-saved. Come back anytime — everything restores. Happy calculating!', highlight:null, position:'center' }
     ];
 
@@ -5488,12 +6207,10 @@ function runTour() {
             </div>
         `;
 
-        // Re-trigger animation
         card.style.animation = 'none';
         void card.offsetWidth;
         card.style.animation = 'tourCardIn 0.42s cubic-bezier(0.34,1.26,0.64,1) both';
 
-        // Run inline scripts in screen HTML
         card.querySelectorAll('script').forEach(s => {
             const ns = document.createElement('script');
             ns.textContent = s.textContent;
@@ -5501,7 +6218,6 @@ function runTour() {
             setTimeout(() => ns.remove(), 100);
         });
 
-        // Wait a frame so card has layout then position
         requestAnimationFrame(() => {
             requestAnimationFrame(() => {
                 const rect = getRect(s.highlight);
@@ -5548,10 +6264,7 @@ function runTour() {
     });
 }
 
-// ============================================================
-// AUTO-LOGOUT ON TAB CLOSE / WINDOW CLOSE
-// Saves draft and clears session so the next visit goes to login
-// ============================================================
+
 (function() {
     /**
      * Core auto-logout: save draft, clear session keys, redirect to
@@ -5559,28 +6272,21 @@ function runTour() {
      * localStorage so the next fresh load shows the login screen).
      */
     function autoLogout(isUnload) {
-        // Only act if a student is currently logged in
         if (!currentStudentName && !currentStudentRegNo) return;
 
-        // Save the latest draft so nothing is lost
         saveDraft({});
 
-        // Log the auto-logout event in admin activity log
         try {
             addStudentLog(currentStudentName, currentStudentRegNo, 'logout');
         } catch(e) {}
 
-        // Clear the session (keep draft key intact — restored on next login)
         localStorage.removeItem('studentName');
         localStorage.removeItem('studentRegNo');
 
         if (isUnload) {
-            // During unload we cannot navigate — the session keys are already
-            // cleared so the next page load will show the login screen.
             return;
         }
 
-        // If the page is still open (visibilitychange hidden), reset the UI
         currentStudentName  = '';
         currentStudentRegNo = '';
 
@@ -5599,35 +6305,22 @@ function runTour() {
             updateStudentDisplay();
         } catch(e) {}
 
-        // Show landing / login page
         const landing = document.getElementById('landingPage');
         const main    = document.getElementById('mainApp');
         if (main)    main.style.display    = 'none';
         if (landing) landing.style.display = 'flex';
     }
 
-    // ── beforeunload: fires when the tab or browser window is closed,
-    //    or when the user navigates away.  We only clear localStorage here
-    //    (no UI changes possible during unload).
     window.addEventListener('beforeunload', function() {
         autoLogout(true);
     });
 
-    // ── pagehide: a more reliable companion to beforeunload on mobile
-    //    browsers (iOS Safari) where beforeunload may not fire.
     window.addEventListener('pagehide', function(e) {
-        // e.persisted === true means the page went into the bfcache (back/forward);
-        // we still want to logout in that case so the cached page doesn't show
-        // a logged-in state if the user returns to it.
         autoLogout(true);
     });
 
-    // ── visibilitychange: fires when the tab is hidden (e.g. the user
-    //    switches tabs or minimises the browser).  On mobile this is also
-    //    the primary signal that the app has been "closed" by the OS.
     document.addEventListener('visibilitychange', function() {
         if (document.visibilityState === 'hidden') {
-            // Save draft silently on hide (acts as an extra auto-save)
             try { saveDraft({}); } catch(e) {}
         }
     });
