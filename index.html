@@ -5450,16 +5450,25 @@ CREATE POLICY "allow_all" ON student_photos
         }
     };
 
-    overlay.querySelector('#clearLogsBtn').onclick = function() {
+    overlay.querySelector('#clearLogsBtn').onclick = async function() {
         if (!confirm('Clear ALL entry/exit logs?\n\nThis cannot be undone.')) return;
+        // Clear local SQLite + localStorage
         runSql('DELETE FROM logs');
         studentLogs = [];
         saveStudentLogs();
         renderLogs(); renderOverview(); renderStudentCards(); renderResults();
+        // Also delete from Supabase so data doesn't come back on next sync
+        try {
+            const sb = getSupabaseClient();
+            if (sb) {
+                await sb.from('student_logs').delete().neq('id', 0);
+            }
+        } catch(e) {}
     };
 
-    overlay.querySelector('#clearStudentLoginsBtn').onclick = () => {
-        if (!confirm('Clear ALL student data?\n\nThis will remove all student logs AND all saved draft data (grades & GPAs) from this device. This cannot be undone.')) return;
+    overlay.querySelector('#clearStudentLoginsBtn').onclick = async () => {
+        if (!confirm('Clear ALL student data?\n\nThis will remove all student logs AND all saved draft data (grades & GPAs) from this device AND Supabase cloud. This cannot be undone.')) return;
+        // Clear local drafts from localStorage
         const keysToRemove = [];
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
@@ -5469,13 +5478,24 @@ CREATE POLICY "allow_all" ON student_photos
         localStorage.removeItem('studentName');
         localStorage.removeItem('studentRegNo');
         localStorage.removeItem('studentEntryLogs');
+        // Clear local SQLite logs too
+        runSql('DELETE FROM logs');
         studentLogs = [];
+        saveStudentLogs();
         if (currentStudentName) {
             currentStudentName = ''; currentStudentRegNo = '';
             updateStudentDisplay();
         }
+        // Also delete from Supabase so data doesn't come back on next sync
+        try {
+            const sb = getSupabaseClient();
+            if (sb) {
+                await sb.from('student_data').delete().neq('reg_no', '');
+                await sb.from('student_logs').delete().neq('id', 0);
+            }
+        } catch(e) {}
         renderOverview(); renderStudentCards(); renderResults(); renderLogs();
-        alert('✅ All student data cleared.');
+        alert('✅ All student data cleared from device and cloud.');
     };
 
     overlay.querySelector('#syncAllStudentDataBtn').onclick = async function() {
@@ -8825,15 +8845,15 @@ function runTour() {
     };
 
     const steps = [
-        { key:'welcome', title:'Welcome to CGPA Calculator!',    desc:'A quick visual guide to help you get started in under 60 seconds. Tap <strong>Next →</strong> to begin.', highlight:null, position:'center' },
-        { key:'roles',   title:'Step 1 — Choose Your Role',      desc:'Tap <strong>Student</strong> to log in with your name &amp; register number. Or <strong>Admin</strong> to manage the system.', highlight:'.role-cards', position:'center' },
-        { key:'photo',   title:'Step 2 — Upload Your Photo <span style="font-size:0.7em;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.3);color:#fbbf24;padding:1px 7px;border-radius:100px;font-weight:600;letter-spacing:0.04em;vertical-align:middle;">OPTIONAL</span>', desc:'Add a <strong>passport-size photo</strong> for official identification — it appears on your <strong>Academic Report &amp; Mark Sheet</strong>, just like a hall ticket. You can skip or add it later.', highlight:null, position:'center' },
-        { key:'dept',    title:'Step 3 — Select Dept & Semester',desc:'Pick your <strong>Department</strong> and <strong>Semester</strong>. Subjects & credits load automatically.', highlight:null, position:'center' },
-        { key:'grades',  title:'Step 4 — Enter Your Grades',     desc:'Choose the <strong>Grade</strong> (O, A+, A, B+…) for each subject. Credits are pre-filled — just pick your grade!', highlight:null, position:'center' },
-        { key:'calcgpa', title:'Step 5 — Calculate GPA',         desc:'Hit <strong>Calculate GPA</strong> to get your semester result instantly, then <strong>Save</strong> it to your record.', highlight:null, position:'center' },
-        { key:'cgpa',    title:'Step 6 — Calculate CGPA',        desc:'Once you\'ve saved semester GPAs, press <strong>Calculate CGPA</strong> to see your overall result and classification.', highlight:null, position:'center' },
-        { key:'print',   title:'Step 7 — Export as PDF',         desc:'Use <strong>Print Report</strong> or <strong>Print Marksheet</strong> to download a beautiful official document with your photo.', highlight:null, position:'center' },
-        { key:'done',    title:"You're all set! 🚀",             desc:'Your progress is auto-saved. Come back anytime — everything restores. Happy calculating!', highlight:null, position:'center' }
+        { key:'welcome', title:'Welcome to CGPA Calculator!',    desc:'Built for <strong>DOTE Diploma students</strong> under <strong>Regulation 2023</strong>. This quick guide walks you through every feature in under 60 seconds. Tap <strong>Next →</strong> to begin.', highlight:null, position:'center' },
+        { key:'roles',   title:'Step 1 — Choose Your Role',      desc:'Tap <strong>Student</strong> to log in with your name, register number, and <strong>Department</strong> (ECE, CSE, MECH…) — all entered right on the login screen. Your session is saved so you can return anytime. <strong>Admin</strong> mode lets staff manage grades, bulk-import results, and view student logs.', highlight:'.role-cards', position:'center' },
+        { key:'dept',    title:'Step 2 — Select Your Semester',   desc:'After logging in, you will be prompted to choose your <strong>Semester</strong> (1–6). All subjects with their official credit values load automatically based on your department and semester. <em>Note: Semester 1 is Basic Engineering — common for all departments.</em>', highlight:null, position:'center' },
+        { key:'photo',   title:'Step 3 — Upload Your Photo <span style="font-size:0.7em;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.3);color:#fbbf24;padding:1px 7px;border-radius:100px;font-weight:600;letter-spacing:0.04em;vertical-align:middle;">OPTIONAL</span>', desc:'Upload a <strong>passport-size photo</strong> (JPG/PNG, max 500 KB) for official identification — it appears on your <strong>Academic Report &amp; Mark Sheet</strong> just like a hall ticket. You can skip now and add it later via the <strong>📷 Photo</strong> button on your dashboard.', highlight:null, position:'center' },
+        { key:'grades',  title:'Step 4 — Enter Your Grades',     desc:'Select your <strong>Grade</strong> (O, A+, A, B+, B, C) for each subject from the dropdown. Credits are pre-filled. Use <strong>RA</strong> for Re-Appear, <strong>SA</strong> for Shortage of Attendance, or <strong>PENDING</strong> if results are not yet announced — arrear subjects are handled automatically.', highlight:null, position:'center' },
+        { key:'calcgpa', title:'Step 5 — Calculate GPA',         desc:'Tap <strong>⚡ Calculate GPA</strong> to instantly compute your semester GPA using the weighted-credit formula. Then hit <strong>💾 Save GPA</strong> to record it. Your grades are <strong>auto-saved as a draft</strong> — nothing is lost if you close the tab.', highlight:null, position:'center' },
+        { key:'cgpa',    title:'Step 6 — Calculate CGPA',        desc:'Once you have saved GPAs for one or more semesters, press <strong>📊 Calculate CGPA</strong>. Your overall CGPA and academic classification (<em>First Class with Distinction, First Class,</em> etc.) are shown instantly across all semesters entered.', highlight:null, position:'center' },
+        { key:'print',   title:'Step 7 — Export as PDF',         desc:'Tap <strong>🖨️ Print Report</strong> for a full academic summary or <strong>📄 Print Marksheet</strong> for a subject-wise grade sheet — both include your photo and college branding. Save directly as a PDF or send to a printer.', highlight:null, position:'center' },
+        { key:'done',    title:"You're all set! 🚀",             desc:'Your grades and GPAs are <strong>auto-saved</strong> to your browser. Log out and return anytime — everything restores exactly where you left off. Works on <strong>mobile &amp; desktop</strong>. Happy calculating! 🎓', highlight:null, position:'center' }
     ];
 
     let currentStep = 0;
